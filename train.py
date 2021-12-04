@@ -25,6 +25,7 @@ def train(opt):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     os.makedirs(f'{opt.exp_dir}/logs', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/imgs', exist_ok=True)
+    os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
     encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim * 2)
@@ -33,7 +34,7 @@ def train(opt):
     model = VINR(encoder, mapper)
     model = nn.DataParallel(model).to(device)
 
-    train_dataloader = get_dataloader(opt, 'toy')
+    train_dataloader = get_dataloader(opt, opt.mode)
     steps_per_epoch = len(train_dataloader)
 
     loss_fn = nn.L1Loss()
@@ -62,6 +63,11 @@ def train(opt):
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
                     save_img(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+        
+        if (epoch + 1) % opt.save_epoch == 0:
+            torch.save(model.state_dict(), f'{opt.exp_dir}/ckpt/{epoch+1}.pth')
+
+
 
 
 if __name__ == '__main__':
