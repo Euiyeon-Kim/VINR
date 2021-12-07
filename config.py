@@ -10,9 +10,9 @@ class Config:
 
         self.epochs = 1000
         self.save_epoch = 20
-        self.viz_step = 1
-        self.batch_size = 4
-        self.patch_size = 256
+        self.viz_step = 500
+        self.batch_size = 2
+        self.patch_size = 64
         self.num_workers = 8
 
         self.lr = 1e-4

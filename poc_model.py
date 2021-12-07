@@ -94,6 +94,7 @@ class Reflector(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
+        x = torch.unsqueeze(x, dim=-1)
         x = self.layers(x)
         b, _ = x.shape
         x = x.view((b, self.out_dim, self.z_dim))
