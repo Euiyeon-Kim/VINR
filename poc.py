@@ -7,10 +7,9 @@ from torch.optim import Adam
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 
-
 from config import Config
 from dataloader import get_dataloader
-from model import Encoder, RGBMapper, VINR
+from poc_model import Encoder, Reflector, VINR
 
 
 def save_img(bgr_tensor, path, norm=True):
@@ -28,8 +27,8 @@ def train(opt):
     os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
-    encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim * 2)
-    mapper = RGBMapper(in_dim=opt.z_dim, out_dim=3)
+    encoder = Encoder(in_dim=3 * opt.num_frames, out_dim=opt.z_dim)
+    mapper = Reflector(in_dim=1, out_dim=3, z_dim=opt.z_dim)
 
     model = VINR(encoder, mapper)
     model = nn.DataParallel(model).to(device)
@@ -63,9 +62,9 @@ def train(opt):
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
                     save_img(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
-        
+
         if (epoch + 1) % opt.save_epoch == 0:
-            torch.save(model.state_dict(), f'{opt.exp_dir}/ckpt/{epoch+1}.pth')
+            torch.save(model.state_dict(), f'{opt.exp_dir}/ckpt/{epoch + 1}.pth')
 
 
 if __name__ == '__main__':
