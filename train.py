@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from dataloader import get_dataloader
-from model import Encoder, RGBMapper, VINR
+from model import Encoder, Modulator, ModRGBMapper, VINR
 
 
 def save_img(bgr_tensor, path, norm=True):
@@ -28,10 +28,11 @@ def train(opt):
     os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
-    encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim * 2)
-    mapper = RGBMapper(in_dim=opt.z_dim, out_dim=3)
+    encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
+    modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
+    mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
 
-    model = VINR(encoder, mapper)
+    model = VINR(encoder, modulator, mapper)
     model = nn.DataParallel(model).to(device)
 
     train_dataloader = get_dataloader(opt, opt.mode)
@@ -53,10 +54,11 @@ def train(opt):
             loss.backward()
             optimizer.step()
 
+            print(loss.item())
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
 
             if step % opt.viz_step == 0:
-                save_img(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_target_{target_t[0]:04f}.png')
+                save_img(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
                 save_img(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
 
                 viz_input = input_frames[0].permute(1, 0, 2, 3)

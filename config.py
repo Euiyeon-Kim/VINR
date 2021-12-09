@@ -1,8 +1,8 @@
 class Config:
     def __init__(self):
-        self.exp_name = 'poc'
+        self.exp_name = 'debug'
         self.exp_dir = f'exps/{self.exp_name}'
-        self.mode = 'train'
+        self.mode = 'toy'
 
         self.data_root = 'x4k'
         self.num_frames = 5
