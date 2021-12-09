@@ -6,12 +6,12 @@ class Config:
 
         self.data_root = 'x4k'
         self.num_frames = 5
-        self.z_dim = 64
+        self.z_dim = 256
 
         self.epochs = 1000
         self.save_epoch = 20
         self.viz_step = 500
-        self.batch_size = 2
+        self.batch_size = 1
         self.patch_size = 64
         self.num_workers = 8
 
