@@ -54,7 +54,6 @@ def train(opt):
             loss.backward()
             optimizer.step()
 
-            print(loss.item())
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
 
             if step % opt.viz_step == 0:

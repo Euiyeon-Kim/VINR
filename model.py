@@ -177,7 +177,7 @@ class VINR(nn.Module):
 
     def forward(self, frames, t):
         encoded = self.encoder(frames)
-        encoded = torch.nn.functional.normalize(encoded)
+        encoded = torch.nn.functional.normalize(encoded, p=1.0)
         mod_params = self.modulator(encoded)
         rgb = self.mapper(t.unsqueeze(-1), mod_params).permute(0, 3, 1, 2)
         return rgb
