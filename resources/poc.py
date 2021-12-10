@@ -9,7 +9,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from dataloader import get_dataloader
-from poc_model import Encoder, Reflector, VINR
+from common_model import Encoder
+from poc_model import Reflector, VINR
 
 
 def save_img(bgr_tensor, path, norm=True):
@@ -70,6 +71,6 @@ def train(opt):
 if __name__ == '__main__':
     config = Config()
     os.makedirs(config.exp_dir, exist_ok=True)
-    shutil.copy('config.py', f'{config.exp_dir}/config.py')
+    shutil.copy('../config.py', f'{config.exp_dir}/config.py')
 
     train(config)

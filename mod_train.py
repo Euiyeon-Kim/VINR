@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from dataloader import get_dataloader
-from model import Encoder, Modulator, ModRGBMapper, VINR
+from mod_model import Encoder, Modulator, ModRGBMapper, VINR
 
 
 def save_img(bgr_tensor, path, norm=True):
