@@ -1,33 +1,28 @@
 import os
-import shutil
 
-import torch.cuda
+import torch
 from torch import nn
 from torch.optim import Adam
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 
-from config import Config
-from dataloader import get_dataloader
+
+def save_img(bgr_tensor, path, norm=True):
+    if norm:
+        bgr_tensor = (bgr_tensor + 1.) / 2.
+    b, g, r = torch.chunk(bgr_tensor, 3, dim=0)
+    rgb = torch.concat((r, g, b), dim=0)
+    save_image(rgb, path)
 
 
-
-
-def train(opt):
+def train(opt, model, train_dataloader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     os.makedirs(f'{opt.exp_dir}/logs', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/imgs', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
-    encoder = Encoder(in_dim=3 * opt.num_frames, out_dim=opt.z_dim)
-    modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
-    mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
-
-    model = VINR(encoder, modulator, mapper)
-    model = nn.DataParallel(model).to(device)
-
-    train_dataloader = get_dataloader(opt, opt.mode)
+    model = model.to(device)
     steps_per_epoch = len(train_dataloader)
 
     loss_fn = nn.L1Loss()
@@ -42,6 +37,7 @@ def train(opt):
 
             pred_frame = model(input_frames, target_t)
             loss = loss_fn(pred_frame, target_frame)
+            print(loss.item())
 
             optimizer.zero_grad()
             loss.backward()
@@ -60,11 +56,3 @@ def train(opt):
 
         if (epoch + 1) % opt.save_epoch == 0:
             torch.save(model.state_dict(), f'{opt.exp_dir}/ckpt/{epoch + 1}.pth')
-
-
-if __name__ == '__main__':
-    config = Config()
-    os.makedirs(config.exp_dir, exist_ok=True)
-    shutil.copy('config.py', f'{config.exp_dir}/config.py')
-
-    train(config)
