@@ -22,6 +22,6 @@ if __name__ == '__main__':
     model = VINR(encoder, modulator, mapper)
     model = nn.DataParallel(model)
 
-    train_dataloader = get_dataloader(opt, opt.mode)
+    train_dataloader, val_dataloader = get_dataloader(opt, opt.mode)
 
-    train(opt, model, train_dataloader)
+    train(opt, model, train_dataloader, val_dataloader)
