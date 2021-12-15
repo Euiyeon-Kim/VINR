@@ -3,8 +3,23 @@ from torch import nn
 
 
 class LIIF(nn.Module):
-    def __init__(self):
+    def __init__(self, in_f, hidden_node, depth):
         super(LIIF, self).__init__()
+        self.in_f = in_f
+        self.hidden_node = hidden_node
+
+        layers = []
+        for i in range(depth):
+            dim = in_f if i == 0 else (hidden_node + in_f)
+            layers.append(nn.Sequential(
+                nn.Linear(dim, hidden_node),
+                nn.ReLU()
+            ))
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.layers(x)
+        return x
 
 
 class VINR(nn.Module):

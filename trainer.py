@@ -107,5 +107,3 @@ def train(opt, model, train_dataloader, val_dataloader):
                 torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                            f'{opt.exp_dir}/ckpt/best.pth')
                 best_psnr = val_psnr
-            print("DONE")
-            exit()
