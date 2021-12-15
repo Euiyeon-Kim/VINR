@@ -9,12 +9,10 @@ from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 
 
-def save_img(bgr_tensor, path, norm=True):
+def save_rgbtensor(rgbtensor, path, norm=True):
     if norm:
-        bgr_tensor = (bgr_tensor + 1.) / 2.
-    b, g, r = torch.chunk(bgr_tensor, 3, dim=0)
-    rgb = torch.concat((r, g, b), dim=0)
-    save_image(rgb, path)
+        rgbtensor = (rgbtensor + 1.) / 2.
+    save_image(rgbtensor, path)
 
 
 def psnr(gt, pred, norm=True):
@@ -43,12 +41,12 @@ def validate(opt, device, model, val_dataloader, epoch):
 
     cur_psnr /= len(val_dataloader)
 
-    save_img(target_frame[0], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[0]:04f}.png')
-    save_img(pred_frame[0], f'{opt.exp_dir}/val/{epoch}_pred.png')
+    save_rgbtensor(target_frame[0], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[0]:04f}.png')
+    save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}_pred.png')
     viz_input = input_frames[0].permute(1, 0, 2, 3)
     viz_input = (viz_input + 1.) / 2.
     for idx, img in enumerate(viz_input):
-        save_img(img, f'{opt.exp_dir}/val/{epoch}_{idx}.png', norm=False)
+        save_rgbtensor(img, f'{opt.exp_dir}/val/{epoch}_{idx}.png', norm=False)
 
     return cur_psnr.item()
 
@@ -89,13 +87,13 @@ def train(opt, model, train_dataloader, val_dataloader):
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
 
             if step % opt.viz_step == 0:
-                save_img(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
-                save_img(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
+                save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
+                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
 
                 viz_input = input_frames[0].permute(1, 0, 2, 3)
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
-                    save_img(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+                    save_rgbtensor(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
 
         # Log lr
         writer.add_scalar('lr', scheduler.get_last_lr()[0], epoch)
@@ -109,4 +107,5 @@ def train(opt, model, train_dataloader, val_dataloader):
                 torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                            f'{opt.exp_dir}/ckpt/best.pth')
                 best_psnr = val_psnr
-
+            print("DONE")
+            exit()
