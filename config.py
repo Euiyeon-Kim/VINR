@@ -2,16 +2,16 @@ class Config:
     def __init__(self):
         self.exp_name = 'debug'
         self.exp_dir = f'exps/{self.exp_name}'
-        self.mode = 'debug'   # 'train' or 'debug'
+        self.mode = 'train'   # 'train' or 'debug'
 
         self.data_root = 'x4k'
-        self.num_frames = 5
+        self.num_frames = 3
         self.z_dim = 256
 
         self.epochs = 1000
         self.val_epoch = 1
         self.viz_step = 500
-        self.batch_size = 4
+        self.batch_size = 1
         self.patch_size = 96
         self.num_workers = 8
 

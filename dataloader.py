@@ -33,18 +33,45 @@ class X4K1000FPS(Dataset):
         self.num_frames = num_frames
         self.patch_size = patch_size
         self.clips = glob(f'{data_root}/*/*')
+        self.total_frame = 65 if self.is_train else 33
 
     def __len__(self):
         return len(self.clips)
 
+    def augment(self, frames, target_frame, target_t):
+
+        # Reverse
+        if random.random() < 0.5:
+            target_t = 1 - target_t
+            frames.reverse()
+
+        frames = np.stack(frames + [target_frame], axis=0)
+
+        # Patchify
+        h, w, c = target_frame.shape
+        ix = random.randrange(0, w - self.patch_size + 1)
+        iy = random.randrange(0, h - self.patch_size + 1)
+        frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+
+        # Flip
+        if random.random() < 0.5:
+            frames = frames[:, :, ::-1, :]
+
+        # Rotate
+        rot = random.randint(0, 3)
+        frames = np.rot90(frames, rot, (1, 2))
+
+        return frames, target_frame, target_t
+
     def __getitem__(self, item):
         cur_clip = self.clips[item]
         frame_paths = natsorted(glob(f'{cur_clip}/*.png'))
-        assert len(frame_paths) == 65, f'Dataset is not complete. Check {cur_clip}'
+        assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
 
         # Set options
-        td = random.randint(2, int(64 / (self.num_frames - 1)))         # max_td = int(64 / (self.num_frames - 1))
-        first_frame_idx = random.randint(0, 64 - ((self.num_frames - 1) * td))
+        # max_td = int(64 / (self.num_frames - 1))
+        td = random.randint(2, int((self.total_frame - 1) / (self.num_frames - 1)))
+        first_frame_idx = random.randint(0, (self.total_frame - 1) - ((self.num_frames - 1) * td))
         last_frame_idx = first_frame_idx + ((self.num_frames - 1) * td)
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
         target_idx = random.randint(first_frame_idx, last_frame_idx)
@@ -57,35 +84,16 @@ class X4K1000FPS(Dataset):
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
         if self.is_train:
-            # Reverse
-            if random.random() < 0.5:
-                target_t = 1 - target_t
-                frames.reverse()
-
-            frames = np.stack(frames + [target_frame], axis=0)
-
-            # Patchify
-            h, w, c = target_frame.shape
-            ix = random.randrange(0, w - self.patch_size + 1)
-            iy = random.randrange(0, h - self.patch_size + 1)
-            frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
-
-            # Flip
-            if random.random() < 0.5:
-                frames = frames[:, :, ::-1, :]
-
-            # Rotate
-            rot = random.randint(0, 3)
-            frames = np.rot90(frames, rot, (1, 2))
+            frames, target_frame, target_t = self.augment(frames, target_frame, target_t)
 
         else:
             frames = np.stack(frames + [target_frame], axis=0)
 
-            # Patchify
-            h, w, c = target_frame.shape
-            ix = random.randrange(0, w - self.patch_size + 1)
-            iy = random.randrange(0, h - self.patch_size + 1)
-            frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+            # # Patchify
+            # h, w, c = target_frame.shape
+            # ix = random.randrange(0, w - self.patch_size + 1)
+            # iy = random.randrange(0, h - self.patch_size + 1)
+            # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
 
         frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))
@@ -95,10 +103,16 @@ class X4K1000FPS(Dataset):
 
 if __name__ == '__main__':
     from config import Config
-    config = Config()
-    train_dataloader = get_dataloader(config, 'train')
+    opt = Config()
+    train_dataloader, val_dataloader = get_dataloader(opt, opt.mode)
+
     for d in train_dataloader:
         input_frames, target_frames, t = d
-        exit()
+        print(input_frames.shape)
+        break
 
+    for d in val_dataloader:
+        input_frames, target_frames, t = d
+        print(input_frames.shape)
+        break
 
