@@ -39,11 +39,9 @@ def validate(opt, device, model, val_dataloader, epoch):
             cur_psnr += psnr(target_frame, pred_frame)
 
     cur_psnr /= len(val_dataloader)
-    save_idx = random.randrange(0, len(val_dataloader))
-
-    save_rgbtensor(target_frame[save_idx], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[save_idx]:04f}.png')
-    save_rgbtensor(pred_frame[save_idx], f'{opt.exp_dir}/val/{epoch}_pred.png')
-    viz_input = input_frames[save_idx].permute(1, 0, 2, 3)
+    save_rgbtensor(target_frame[0], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[0]:04f}.png')
+    save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}_pred.png')
+    viz_input = input_frames[0].permute(1, 0, 2, 3)
     viz_input = (viz_input + 1.) / 2.
     for idx, img in enumerate(viz_input):
         save_rgbtensor(img, f'{opt.exp_dir}/val/{epoch}_{idx}.png', norm=False)
@@ -85,7 +83,6 @@ def train(opt, model, train_dataloader, val_dataloader):
             optimizer.step()
 
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
-
             if step % opt.viz_step == 0:
                 save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
                 save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')

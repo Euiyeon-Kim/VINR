@@ -17,7 +17,7 @@ def get_dataloader(opt, mode):
         val_dataset = dataset(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
         train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
                                       num_workers=opt.num_workers)
-        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, drop_last=False,
+        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
                                     num_workers=opt.num_workers)
         return train_dataloader, val_dataloader
 
