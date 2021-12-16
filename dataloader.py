@@ -11,9 +11,10 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def get_dataloader(opt, mode):
+    dataset = X4K1000FPS if opt.model == 'mod' else X4KLIIF
     if mode == 'train':
-        train_dataset = X4KLIIF(f'{opt.data_root}/train', opt.num_frames, opt.patch_size)
-        val_dataset = X4KLIIF(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
+        train_dataset = dataset(f'{opt.data_root}/train', opt.num_frames, opt.patch_size)
+        val_dataset = dataset(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
         train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
                                       num_workers=opt.num_workers)
         val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, drop_last=False,
@@ -29,9 +30,8 @@ def get_dataloader(opt, mode):
 
 
 class X4K1000FPS(Dataset):
-    def __init__(self, data_root, arch, num_frames, patch_size, is_train=True):
+    def __init__(self, data_root, num_frames, patch_size, is_train=True):
         super(X4K1000FPS, self).__init__()
-        self.arch = arch
         self.is_train = is_train
         self.num_frames = num_frames
         self.patch_size = patch_size

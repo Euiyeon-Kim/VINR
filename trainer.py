@@ -1,6 +1,5 @@
 import os
-
-import numpy as np
+import random
 
 import torch
 from torch import nn
@@ -16,14 +15,14 @@ def save_rgbtensor(rgbtensor, path, norm=True):
 
 
 def psnr(gt, pred, norm=True):
-    if norm:    # (-1, 1) to (0, 1)
-        gt = (gt + 1.) / 2.
-        pred = (pred + 1.) / 2.
+    if norm:    # (-1, 1) to (0, 255)
+        gt = ((gt + 1.) / 2.) * 255.
+        pred = ((pred + 1.) / 2.) * 255.
     diff = gt - pred
     rmse = torch.sqrt(torch.mean(torch.pow(diff, 2)))
     if rmse == 0:
         return float('inf')
-    return 20 * torch.log10(1. / rmse)
+    return 20 * torch.log10(255. / rmse)
 
 
 def validate(opt, device, model, val_dataloader, epoch):
@@ -40,10 +39,11 @@ def validate(opt, device, model, val_dataloader, epoch):
             cur_psnr += psnr(target_frame, pred_frame)
 
     cur_psnr /= len(val_dataloader)
+    save_idx = random.randrange(0, len(val_dataloader))
 
-    save_rgbtensor(target_frame[0], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[0]:04f}.png')
-    save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}_pred.png')
-    viz_input = input_frames[0].permute(1, 0, 2, 3)
+    save_rgbtensor(target_frame[save_idx], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[save_idx]:04f}.png')
+    save_rgbtensor(pred_frame[save_idx], f'{opt.exp_dir}/val/{epoch}_pred.png')
+    viz_input = input_frames[save_idx].permute(1, 0, 2, 3)
     viz_input = (viz_input + 1.) / 2.
     for idx, img in enumerate(viz_input):
         save_rgbtensor(img, f'{opt.exp_dir}/val/{epoch}_{idx}.png', norm=False)
