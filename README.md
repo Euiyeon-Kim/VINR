@@ -1,4 +1,6 @@
 # VINR
+## 고려사항
+- Patch를 정사각형이 아니게
 
 ## Prev exps
 ### 1. 재현님구조
@@ -11,3 +13,5 @@
 - t를 LFF로 amplify후 modulation parameter로 modSIREN 통과 -> RGB output
 
 ### 3. Mod + LIIF
+- lr z에서 hr z를 생성
+- lr z와 coord로 바로 rgb 생성

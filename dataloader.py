@@ -63,10 +63,7 @@ class X4K1000FPS(Dataset):
         rot = random.randint(0, 3)
         frames = np.rot90(frames, rot, (1, 2))
 
-        return frames, target_frame, target_t
-
-    def mod_item(self, idx):
-        pass
+        return frames, target_t
 
     def __getitem__(self, item):
         cur_clip = self.clips[item]
@@ -88,16 +85,9 @@ class X4K1000FPS(Dataset):
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
         if self.is_train:
-            frames, target_frame, target_t = self.augment(frames, target_frame, target_t)
-
+            frames, target_t = self.augment(frames, target_frame, target_t)
         else:
             frames = np.stack(frames + [target_frame], axis=0)
-
-            # # Patchify
-            # h, w, c = target_frame.shape
-            # ix = random.randrange(0, w - self.patch_size + 1)
-            # iy = random.randrange(0, h - self.patch_size + 1)
-            # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
 
         frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))
@@ -106,11 +96,14 @@ class X4K1000FPS(Dataset):
 
 
 class X4KLIIF(Dataset):
-    def __init__(self, data_root, num_frames, patch_size, is_train=True, scale_min=1, scale_max=4):
+    def __init__(self, data_root, num_frames, patch_size, is_train=True, scale_min=1, scale_max=4, sample_q=2304,
+                 lr_size=24):
         super(X4KLIIF, self).__init__()
         self.is_train = is_train
         self.scale_min = scale_min
         self.scale_max = scale_max
+        self.lr_size = lr_size
+        self.sample_q = lr_size * lr_size
         self.num_frames = num_frames
         self.patch_size = patch_size
         self.clips = glob(f'{data_root}/*/*')
@@ -119,13 +112,13 @@ class X4KLIIF(Dataset):
     def __len__(self):
         return len(self.clips)
 
-    def augment(self, frames, target_frame, target_t):
+    def augment(self, hr_frames, target_frame, target_t):
         # Reverse
         if random.random() < 0.5:
             target_t = 1 - target_t
-            frames.reverse()
+            hr_frames.reverse()
 
-        frames = np.stack(frames + [target_frame], axis=0)
+        frames = np.stack(hr_frames + [target_frame], axis=0)
 
         # Patchify
         h, w, c = target_frame.shape
@@ -141,7 +134,68 @@ class X4KLIIF(Dataset):
         rot = random.randint(0, 3)
         frames = np.rot90(frames, rot, (1, 2))
 
-        return frames, target_frame, target_t
+        return frames, target_t
+
+    def make_coord(self, shape, ranges=None, flatten=True):
+        coord_seqs = []
+        for i, n in enumerate(shape):
+            if ranges is None:
+                v0, v1 = -1, 1
+            else:
+                v0, v1 = ranges[i]
+            r = (v1 - v0) / (2 * n)
+            seq = v0 + r + (2 * r) * torch.arange(n).float()
+            coord_seqs.append(seq)
+        ret = torch.stack(torch.meshgrid(*coord_seqs), dim=-1)
+        if flatten:
+            ret = ret.view(-1, ret.shape[-1])
+        return ret
+
+    def to_pixel_samples(self, img):
+        coord = self.make_coord(img.shape[-2:])
+        rgb = img.view(3, -1).permute(1, 0)
+        return coord, rgb
+
+    def make_liif_data(self, frames, scale):
+        # frames: T, H, W, C
+        lr_res = self.lr_size
+        hr_res = round(lr_res * scale)
+
+        # Make HR patch
+        _, h, w, _ = frames.shape
+        ix = random.randrange(0, w - hr_res + 1)
+        iy = random.randrange(0, h - hr_res + 1)
+        hr_frames = frames[:, iy:iy + hr_res, ix:ix + hr_res, :]
+
+        inp_frame = hr_frames[:-1, :, :, :]
+        target_frame = hr_frames[-1, :, :, :]
+
+        lr_frames = []
+        for f in inp_frame:
+            lr_f = np.array(Image.fromarray(f).resize((lr_res, lr_res), Image.BICUBIC))
+            lr_frames.append(lr_f)
+        lr_frames = np.stack(lr_frames, axis=0)
+
+        target_frame = target_frame.transpose((2, 0, 1)) / 127.5 - 1
+        target_frame = torch.Tensor(target_frame.astype(float))
+        target_coord, target_rgb = self.to_pixel_samples(target_frame.contiguous())
+
+        # Sample target hr frame info to make batch
+        sample_lst = np.random.choice(len(target_coord), self.sample_q, replace=False)
+        target_coord = target_coord[sample_lst]
+        target_rgb = target_rgb[sample_lst]
+
+        cell = torch.ones_like(target_coord)
+        cell[:, 0] *= 2 / target_frame.shape[-2]
+        cell[:, 1] *= 2 / target_frame.shape[-1]
+
+        return lr_frames, target_coord, target_rgb, cell
+
+    def norm_and_to_tensor(self, img_arr):
+        # T, H, W, C -> C, T, H, W
+        img_arr = img_arr.transpose((3, 0, 1, 2)) / 127.5 - 1
+        img_arr = torch.Tensor(img_arr.astype(float))
+        return img_arr
 
     def __getitem__(self, item):
         cur_clip = self.clips[item]
@@ -155,19 +209,33 @@ class X4KLIIF(Dataset):
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
         target_idx = random.randint(first_frame_idx, last_frame_idx)
 
+        # Read frames
+        origin_frame = []
+        for idx in selected_idx:
+            origin_frame.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+        origin_target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
+        target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
+
+        if self.is_train:
+            frames, target_t = self.augment(origin_frame, origin_target_frame, target_t)
+        else:
+            frames = np.stack(origin_frame + [origin_target_frame], axis=0)
 
         scale = random.uniform(self.scale_min, self.scale_max)
+        lr_frames, target_coord, target_rgb, cell = self.make_liif_data(frames, scale)
 
-        # Read frames
-        frames = []
-        for idx in selected_idx:
-            cur_f = Image.open(frame_paths[idx]).convert('RGB')
-            lr_res = math.floor(cur_f.size[0] / scale + 1e-9)
-            cur_f = cur_f.resize((lr_res, lr_res), Image.BICUBIC)
-            frames.append(np.array(cur_f))
+        frames = self.norm_and_to_tensor(frames)
+        lr_frames = self.norm_and_to_tensor(lr_frames)
 
-        return frames
-
+        return {
+            'input_frames': frames[:, :-1, :, :],
+            'target_frame': frames[:, -1, :, :],
+            'target_t': target_t,
+            'liif_inp': lr_frames,
+            'liif_rgb': target_rgb,
+            'liif_coord': target_coord,
+            'liif_cell': cell,
+        }
 
 
 if __name__ == '__main__':
@@ -176,12 +244,5 @@ if __name__ == '__main__':
     t, v = get_dataloader(config, config.mode)
 
     for d in t:
-        input_frames = d
-        print(input_frames.shape)
+        print(d['liif_inp'].shape)
         break
-
-    for d in v:
-        input_frames, target_frames, t = d
-        print(input_frames.shape)
-        break
-

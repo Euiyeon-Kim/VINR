@@ -3,10 +3,10 @@ class Config:
         self.exp_name = 'debug'
         self.exp_dir = f'exps/{self.exp_name}'
         self.mode = 'train'     # 'train' or 'test'
-        self.model = 'mod'      # 'mod' or 'liif'
+        self.model = 'liif'     # 'mod' or 'liif'
 
         self.data_root = 'x4k'
-        self.num_frames = 3
+        self.num_frames = 5
         self.z_dim = 256
 
         self.epochs = 1000
