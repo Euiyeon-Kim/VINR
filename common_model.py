@@ -84,6 +84,7 @@ class Encoder(nn.Module):
                 nn.Conv2d(nf * 4, out_dim, kernel_size=(3, 3), padding=(1, 1), bias=use_bias),
             ]
         )
+        layers.append(nn.Tanh())
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

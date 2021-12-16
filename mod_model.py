@@ -62,11 +62,8 @@ class VINR(nn.Module):
 
     def forward(self, frames, t):
         encoded = self.encoder(frames)
-        min_v = torch.min(encoded, dim=1, keepdim=True)[0]
-        max_v = torch.max(encoded, dim=1, keepdim=True)[0]
-        normalized = (((encoded - min_v) / (max_v - min_v)) - 0.5) * 2.0    # (-1, 1)
-
-        mod_params = self.modulator(normalized)
+        print(torch.min(encoded), torch.max(encoded))
+        mod_params = self.modulator(encoded)
         rgb = self.mapper(t.unsqueeze(-1), mod_params).permute(0, 3, 1, 2)
         return rgb
 
