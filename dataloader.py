@@ -103,7 +103,7 @@ class X4KLIIF(Dataset):
         self.scale_min = scale_min
         self.scale_max = scale_max
         self.lr_size = lr_size
-        self.sample_q = lr_size * lr_size
+        self.sample_q = 100 # lr_size * lr_size
         self.num_frames = num_frames
         self.patch_size = patch_size
         self.clips = glob(f'{data_root}/*/*')
@@ -146,7 +146,7 @@ class X4KLIIF(Dataset):
             r = (v1 - v0) / (2 * n)
             seq = v0 + r + (2 * r) * torch.arange(n).float()
             coord_seqs.append(seq)
-        ret = torch.stack(torch.meshgrid(*coord_seqs), dim=-1)
+        ret = torch.stack(torch.meshgrid(*coord_seqs, indexing='xy'), dim=-1)
         if flatten:
             ret = ret.view(-1, ret.shape[-1])
         return ret
@@ -235,6 +235,7 @@ class X4KLIIF(Dataset):
             'liif_rgb': target_rgb,
             'liif_coord': target_coord,
             'liif_cell': cell,
+            'scale': scale
         }
 
 

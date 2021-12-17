@@ -1,6 +1,7 @@
 # VINR
 ## 고려사항
 - Patch를 정사각형이 아니게
+- LIFF를 HR image z랑 loss를 줄지, rgb pixel까지 가서 줄지 -> 일단 구조는 z 생성
 
 ## Prev exps
 ### 1. 재현님구조
