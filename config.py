@@ -1,9 +1,9 @@
 class Config:
     def __init__(self):
-        self.exp_name = 'mod_debug'
+        self.exp_name = 'liif_debug'
         self.exp_dir = f'exps/{self.exp_name}'
         self.mode = 'train'     # 'train' or 'test'
-        self.model = 'mod'     # 'mod' or 'liif'
+        self.model = 'liif'     # 'mod' or 'liif'
 
         self.data_root = 'x4k'
         self.num_frames = 5
@@ -11,7 +11,7 @@ class Config:
 
         self.epochs = 1000
         self.val_epoch = 1
-        self.viz_step = 20
+        self.viz_step = 1
         self.batch_size = 2
         self.patch_size = 96
         self.num_workers = 8
@@ -20,4 +20,7 @@ class Config:
         self.T_max = 5
         self.min_lr = 1e-6
 
-        self.liif_lambda = 2
+        self.liif_lambda = 0.5
+        self.save_epoch = 20
+        self.lr_size = 24
+        self.scale_max = 4

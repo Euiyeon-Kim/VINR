@@ -11,22 +11,25 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def get_dataloader(opt, mode):
-    dataset = X4K1000FPS if opt.model == 'mod' else X4KLIIF
-    if mode == 'train':
-        train_dataset = dataset(f'{opt.data_root}/train', opt.num_frames, opt.patch_size)
-        val_dataset = dataset(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
+    if opt.model == 'liif':
+        train_dataset = X4KLIIF(f'{opt.data_root}/train', opt.num_frames, opt.patch_size,
+                                scale_max=opt.scale_max, lr_size=opt.lr_size)
+        val_dataset = X4KLIIF(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False,
+                              scale_max=opt.scale_max, lr_size=opt.lr_size)
         train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
                                       num_workers=opt.num_workers)
         val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
                                     num_workers=opt.num_workers)
-        return train_dataloader, val_dataloader
 
-    elif mode == 'test':
-        test_dataset = None
-        return test_dataset
+    elif opt.model == 'mod':
+        train_dataset = X4K1000FPS(f'{opt.data_root}/train', opt.num_frames, opt.patch_size)
+        val_dataset = X4K1000FPS(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
+        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
+                                      num_workers=opt.num_workers)
+        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
+                                    num_workers=opt.num_workers)
 
-    else:
-        exit(f"Unsupported exp mode {mode}")
+    return train_dataloader, val_dataloader
 
 
 class X4K1000FPS(Dataset):
@@ -96,14 +99,13 @@ class X4K1000FPS(Dataset):
 
 
 class X4KLIIF(Dataset):
-    def __init__(self, data_root, num_frames, patch_size, is_train=True, scale_min=1, scale_max=4, sample_q=2304,
-                 lr_size=24):
+    def __init__(self, data_root, num_frames, patch_size, is_train=True, scale_min=1, scale_max=4, lr_size=96):
         super(X4KLIIF, self).__init__()
         self.is_train = is_train
         self.scale_min = scale_min
         self.scale_max = scale_max
         self.lr_size = lr_size
-        self.sample_q = 100 # lr_size * lr_size
+        self.sample_q = lr_size * lr_size
         self.num_frames = num_frames
         self.patch_size = patch_size
         self.clips = glob(f'{data_root}/*/*')
