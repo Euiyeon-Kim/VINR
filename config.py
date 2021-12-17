@@ -1,9 +1,9 @@
 class Config:
     def __init__(self):
-        self.exp_name = 'liif_debug'
+        self.exp_name = 'mod_debug'
         self.exp_dir = f'exps/{self.exp_name}'
         self.mode = 'train'     # 'train' or 'test'
-        self.model = 'liif'     # 'mod' or 'liif'
+        self.model = 'mod'     # 'mod' or 'liif'
 
         self.data_root = 'x4k'
         self.num_frames = 5
