@@ -156,7 +156,7 @@ class VINR(nn.Module):
 
         min_v = torch.min(encoded, dim=1, keepdim=True)[0]
         max_v = torch.max(encoded, dim=1, keepdim=True)[0]
-        normalized = (((encoded - min_v) / (max_v - min_v)) - 0.5) * 2.0    # (-1, 1)
+        normalized = (((encoded - min_v) / (max_v - min_v + 1e-9)) - 0.5) * 2.0    # (-1, 1)
 
         b, z_dim, h, w = normalized.shape
         normalized = normalized.permute((0, 2, 3, 1)).view(-1, h*w, z_dim)
