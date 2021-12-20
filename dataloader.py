@@ -253,7 +253,7 @@ if __name__ == '__main__':
     config.model = 'mod'
     train, val = get_dataloader(config)
 
-    for d in train:
+    for d in val:
         inp, target, t = d
         print(inp.shape, target.shape, t.shape)
         exit()
