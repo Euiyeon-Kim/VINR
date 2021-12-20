@@ -22,8 +22,8 @@ def get_dataloader(opt):
                                     num_workers=opt.num_workers)
 
     elif opt.model == 'mod':
-        train_dataset = X4K1000FPS(opt, True)
-        val_dataset = X4K1000FPS(opt, False)
+        train_dataset = X4K1000FPS(opt, f'{opt.data_root}/train', True)
+        val_dataset = X4K1000FPS(opt, f'{opt.data_root}/val', False)
         train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
                                       num_workers=opt.num_workers)
         val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
@@ -32,12 +32,12 @@ def get_dataloader(opt):
 
 
 class X4K1000FPS(Dataset):
-    def __init__(self, opt, is_train=True):
+    def __init__(self, opt, root, is_train=True):
         super(X4K1000FPS, self).__init__()
         self.is_train = is_train
         self.num_frames = opt.num_frames
         self.patch_size = opt.patch_size
-        self.clips = glob(f'{opt.data_root}/train/*/*')
+        self.clips = glob(f'{root}/*/*')
         self.total_frame = 65 if self.is_train else 33
 
     def __len__(self):

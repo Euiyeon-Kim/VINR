@@ -5,6 +5,7 @@ from torch import nn
 
 from common_model import Encoder
 from mod_model import Modulator, ModRGBMapper, VINR
+from dataloader import X4K1000FPS
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--exp_name', default='frame5_mod_z128')
@@ -24,3 +25,6 @@ if __name__ == '__main__':
 
     ckpt = torch.load(f'exps/{EXP_NAME}/ckpt/best.pth')
     model.load_state_dict(ckpt['model'])
+
+    test_dataset = X4K1000FPS(opt, False)
+

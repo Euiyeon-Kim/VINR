@@ -101,6 +101,6 @@ def train(opt, model, train_dataloader, val_dataloader):
             best_psnr = val_psnr
 
         # Log lr
-        writer.add_scalar('lr', scheduler.get_last_lr()[0], epoch)
+        writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
         scheduler.step(val_psnr)
 
