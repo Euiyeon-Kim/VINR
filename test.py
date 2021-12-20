@@ -1,6 +1,7 @@
 import os
 import argparse
 from glob import glob
+from natsort import natsorted
 
 import numpy as np
 from PIL import Image
@@ -37,14 +38,14 @@ if __name__ == '__main__':
     # plt.legend()
     # plt.savefig('lff.png')
 
-    clips = glob(f'{opt.data_root}/val/*/*')
+    clips = natsorted(glob(f'{opt.data_root}/val/*/*'))
     total_f = opt.num_frames * 8
     target_t = np.linspace((1 / total_f), (1 - (1 / total_f)), (total_f - 1)).reshape((total_f-1, 1))
     target_t = torch.from_numpy(target_t).float()
 
     for clip in clips:
         clip_name = clip.split('/')[-1]
-        inps = glob(f'{clip}/*')
+        inps = natsorted(glob(f'{clip}/*'))
         for i in range(0, len(inps) - opt.num_frames+1, opt.num_frames-1):
             frames = []
             for j in range(opt.num_frames):
@@ -54,7 +55,7 @@ if __name__ == '__main__':
             inp_frames = torch.unsqueeze(torch.Tensor(frames.astype(float)).to(device), 0)
             for t in target_t:
                 pred_frame = model(inp_frames, t)
-                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}_{i}{j}_{target_t[0].item()}.png')
+                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}_{i}{j}_{target_t[0].item():04f}.png')
 
         # input_frames, target_frame, target_t = data
         #
