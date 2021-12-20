@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from common_model import SirenLayer
 
 
 class Reflector(nn.Module):
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     encoder = Encoder(in_dim=3 * opt.num_frames, out_dim=opt.z_dim)
     mapper = Reflector(in_dim=1, out_dim=3, z_dim=opt.z_dim)
     model = VINR(encoder, mapper)
-    out = model(torch.rand((4, 3, opt.num_frames, 32, 32)), torch.rand(4, 1))
+    out = model(torch.rand((4, 3, opt.num_frames, 32, 32)), torch.rand(4))
     print(out.shape)
 
 
