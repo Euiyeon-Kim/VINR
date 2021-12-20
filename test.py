@@ -18,7 +18,7 @@ if __name__ == '__main__':
     from test_config import Config
     opt = Config()
 
-    os.makedirs(f'{opt.exp_dir}/infer')
+    os.makedirs(f'{opt.exp_dir}/infer', exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
     modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # plt.legend()
     # plt.savefig('lff.png')
 
-    clips = glob(f'{opt.data_root}/test/*/*')
+    clips = glob(f'{opt.data_root}/val/*/*')
     total_f = opt.num_frames * 8
     target_t = np.linspace((1 / total_f), (1 - (1 / total_f)), (total_f - 1)).reshape((total_f-1, 1))
     target_t = torch.from_numpy(target_t).float()
@@ -54,7 +54,7 @@ if __name__ == '__main__':
             inp_frames = torch.unsqueeze(torch.Tensor(frames.astype(float)).to(device), 0)
             for t in target_t:
                 pred_frame = model(inp_frames, t)
-                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}_{i}{j}_{target_t[0]}.png')
+                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}_{i}{j}_{target_t[0].item()}.png')
 
         # input_frames, target_frame, target_t = data
         #
