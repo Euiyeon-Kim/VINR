@@ -63,7 +63,8 @@ def train(opt, model, train_dataloader, val_dataloader):
 
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.T_max, eta_min=opt.min_lr)
+    # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.T_max, eta_min=opt.min_lr)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max')
 
     for epoch in range(opt.epochs):
         model.train()
@@ -91,15 +92,15 @@ def train(opt, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_input):
                     save_rgbtensor(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
 
+        # Validate - save best model
+        val_psnr = validate(opt, device, model, val_dataloader, epoch)
+        writer.add_scalar('val_psnr', val_psnr, epoch)
+        if val_psnr > best_psnr:
+            torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
+                       f'{opt.exp_dir}/ckpt/best.pth')
+            best_psnr = val_psnr
+
         # Log lr
         writer.add_scalar('lr', scheduler.get_last_lr()[0], epoch)
-        scheduler.step()
+        scheduler.step(val_psnr)
 
-        # Save best psnr model
-        if (epoch + 1) % opt.val_epoch == 0:
-            val_psnr = validate(opt, device, model, val_dataloader, epoch)
-            writer.add_scalar('val_psnr', val_psnr, epoch)
-            if val_psnr > best_psnr:
-                torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
-                           f'{opt.exp_dir}/ckpt/best.pth')
-                best_psnr = val_psnr

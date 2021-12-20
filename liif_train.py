@@ -12,6 +12,7 @@ from liif_model import LIIF, VINR, Modulator, ModRGBMapper
 
 if __name__ == '__main__':
     opt = Config()
+    opt.model = 'liif'
     os.makedirs(opt.exp_dir, exist_ok=True)
     shutil.copy('config.py', f'{opt.exp_dir}/config.py')
 

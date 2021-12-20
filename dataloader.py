@@ -10,7 +10,7 @@ from natsort import natsorted
 from torch.utils.data import Dataset, DataLoader
 
 
-def get_dataloader(opt, mode):
+def get_dataloader(opt):
     if opt.model == 'liif':
         train_dataset = X4KLIIF(f'{opt.data_root}/train', opt.num_frames, opt.patch_size,
                                 scale_max=opt.scale_max, lr_size=opt.lr_size)
@@ -22,23 +22,22 @@ def get_dataloader(opt, mode):
                                     num_workers=opt.num_workers)
 
     elif opt.model == 'mod':
-        train_dataset = X4K1000FPS(f'{opt.data_root}/train', opt.num_frames, opt.patch_size)
-        val_dataset = X4K1000FPS(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False)
+        train_dataset = X4K1000FPS(opt, True)
+        val_dataset = X4K1000FPS(opt, False)
         train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
                                       num_workers=opt.num_workers)
         val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
                                     num_workers=opt.num_workers)
-
     return train_dataloader, val_dataloader
 
 
 class X4K1000FPS(Dataset):
-    def __init__(self, data_root, num_frames, patch_size, is_train=True):
+    def __init__(self, opt, is_train=True):
         super(X4K1000FPS, self).__init__()
         self.is_train = is_train
-        self.num_frames = num_frames
-        self.patch_size = patch_size
-        self.clips = glob(f'{data_root}/*/*')
+        self.num_frames = opt.num_frames
+        self.patch_size = opt.patch_size
+        self.clips = glob(f'{opt.data_root}/train/*/*')
         self.total_frame = 65 if self.is_train else 33
 
     def __len__(self):
@@ -68,7 +67,7 @@ class X4K1000FPS(Dataset):
 
         return frames, target_t
 
-    def __getitem__(self, item):
+    def __getitem__(self, item):        # B, C, T, H, W
         cur_clip = self.clips[item]
         frame_paths = natsorted(glob(f'{cur_clip}/*.png'))
         assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
@@ -251,8 +250,10 @@ class X4KLIIF(Dataset):
 if __name__ == '__main__':
     from config import Config
     config = Config()
-    t, v = get_dataloader(config, config.mode)
+    config.model = 'mod'
+    train, val = get_dataloader(config)
 
-    for d in t:
-        print(d['liif_inp'].shape)
-        break
+    for d in train:
+        inp, target, t = d
+        print(inp.shape, target.shape, t.shape)
+        exit()
