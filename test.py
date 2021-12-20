@@ -39,28 +39,25 @@ if __name__ == '__main__':
     # plt.savefig('lff.png')
 
     clips = natsorted(glob(f'{opt.data_root}/val/*/*'))
-    total_f = opt.num_frames * 8
+    total_f = 33
     target_t = np.linspace((1 / total_f), (1 - (1 / total_f)), (total_f - 1)).reshape((total_f-1, 1))
     target_t = torch.from_numpy(target_t).float()
 
     for clip in clips:
         clip_name = clip.split('/')[-1]
+        os.makedirs(f'{opt.exp_dir}/infer/{clip_name}', exist_ok=True)
         inps = natsorted(glob(f'{clip}/*'))
-        for i in range(0, len(inps) - opt.num_frames+1, opt.num_frames-1):
-            frames = []
-            for j in range(opt.num_frames):
-                frames.append(np.array(Image.open(inps[i+j]).convert('RGB')))
-            frames = np.stack(frames, axis=0)
-            frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
-            inp_frames = torch.unsqueeze(torch.Tensor(frames.astype(float)).to(device), 0)
-            for t in target_t:
-                pred_frame = model(inp_frames, t)
-                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}_{i}{j}_{target_t[0].item():04f}.png')
 
-        # input_frames, target_frame, target_t = data
-        #
-        # input_frames = input_frames.to(device)
+        frames = []
+        for i in range(0, len(inps), 8):
+            frames.append(np.array(Image.open(inps[i]).convert('RGB')))
+        Image.fromarray(frames[0]).save(f'{opt.exp_dir}/infer/{clip_name}/0.png')
+        Image.fromarray(frames[-1]).save(f'{opt.exp_dir}/infer/{clip_name}/1.png')
 
-        # pred_frame = model(input_frames, target_t)
+        frames = np.stack(frames, axis=0)
+        frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
+        inp_frames = torch.unsqueeze(torch.Tensor(frames.astype(float)).to(device), 0)
 
-
+        for t in target_t:
+            pred_frame = model(inp_frames, t)
+            save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/infer/{clip_name}/{t.item():04f}.png')
