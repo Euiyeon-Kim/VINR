@@ -4,7 +4,7 @@ class Config:
         self.exp_dir = f'exps/{self.exp_name}'
         self.mode = 'train'     # 'train' or 'test'
 
-        self.z_dim = 128
+        self.z_dim = 64
         self.num_frames = 5
 
         # Dataset
@@ -14,10 +14,10 @@ class Config:
 
         # Train setting
         self.epochs = 1000
-        self.viz_step = 1
+        self.viz_step = 100
         self.batch_size = 2
-        self.lr = 1e-4
-        self.min_lr = 1e-4
+        self.lr = 2e-4
+        self.min_lr = 1e-6
 
         # LIIF
         self.liif_lambda = 0.5

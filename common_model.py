@@ -65,8 +65,8 @@ class Encoder(nn.Module):
             nn.ReflectionPad2d(3),
             nn.Conv2d(in_dim, nf, kernel_size=(7, 7), padding=(0, 0), bias=use_bias),
             nn.ReLU(),
-            nn.ReflectionPad2d(1),
-            nn.Conv2d(nf, nf * 2, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(nf, nf * 2, kernel_size=(7, 7), padding=(0, 0), bias=use_bias),
             nn.BatchNorm2d(nf * 2),
             nn.ReLU(),
             nn.ReflectionPad2d(1),
@@ -88,7 +88,6 @@ class Encoder(nn.Module):
                 nn.Conv2d(nf * 4, out_dim, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
             ]
         )
-        # layers.append(nn.Tanh())
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

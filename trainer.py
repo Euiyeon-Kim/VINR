@@ -77,6 +77,7 @@ def train(opt, model, train_dataloader, val_dataloader):
 
             pred_frame = model(input_frames, target_t)
             loss = loss_fn(pred_frame, target_frame)
+            print(loss.item())
 
             optimizer.zero_grad()
             loss.backward()

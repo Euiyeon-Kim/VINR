@@ -73,24 +73,24 @@ class X4K1000FPS(Dataset):
         assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
 
         # Set options
-        td = random.randint(2, int((self.total_frame - 1) / (self.num_frames - 1)))
+        td = random.randint(2, random.randint(2, int((self.total_frame - 1) / (self.num_frames - 1))))
         first_frame_idx = random.randint(0, (self.total_frame - 1) - ((self.num_frames - 1) * td))
         last_frame_idx = first_frame_idx + ((self.num_frames - 1) * td)
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
         target_idx = random.randint(first_frame_idx, last_frame_idx)
 
-        scale = random.uniform(1, 2)
+        # scale = random.uniform(1, 2)
 
         # Read frames
         frames = []
         for idx in selected_idx:
-            f = Image.open(frame_paths[idx]).convert('RGB')
-            h, w = f.size
-            small_h, small_w = int(h / scale), int(w / scale)
-            frames.append(np.array(f.resize((small_h, small_w))))
-            # frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
-        target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB').resize((small_h, small_w)))
-        # target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
+            # f = Image.open(frame_paths[idx]).convert('RGB')
+            # h, w = f.size
+            # small_h, small_w = int(h / scale), int(w / scale)
+            # frames.append(np.array(f.resize((small_h, small_w))))
+            frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+        # target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB').resize((small_h, small_w)))
+        target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
         if self.is_train:
@@ -211,7 +211,7 @@ class X4KLIIF(Dataset):
         assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
 
         # Set options
-        td = random.randint(2, int((self.total_frame - 1) / (self.num_frames - 1)))
+        td = random.randint(2, 32)  # int((self.total_frame - 1) / (self.num_frames - 1)))
         first_frame_idx = random.randint(0, (self.total_frame - 1) - ((self.num_frames - 1) * td))
         last_frame_idx = first_frame_idx + ((self.num_frames - 1) * td)
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
