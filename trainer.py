@@ -64,7 +64,7 @@ def train(opt, model, train_dataloader, val_dataloader):
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
     # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.T_max, eta_min=opt.min_lr)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max')
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.2, patience=5, min_lr=opt.min_lr)
 
     for epoch in range(opt.epochs):
         model.train()
