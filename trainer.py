@@ -105,3 +105,6 @@ def train(opt, model, train_dataloader, val_dataloader):
         writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
         scheduler.step(val_psnr)
 
+        if (epoch+1) % opt.save_epoch == 0:
+            torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
+                       f'{opt.exp_dir}/ckpt/{epoch}.pth')
