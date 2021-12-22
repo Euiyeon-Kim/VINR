@@ -42,11 +42,9 @@ class ResnetBlock(nn.Module):
     def __init__(self, dim, use_bias=True):
         super(ResnetBlock, self).__init__()
         self.layers = nn.Sequential(
-            nn.BatchNorm2d(dim),
             nn.ReLU(),
             nn.ReflectionPad2d(1),
             nn.Conv2d(dim, dim, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
-            nn.BatchNorm2d(dim),
             nn.ReLU(),
             nn.ReflectionPad2d(1),
             nn.Conv2d(dim, dim, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
@@ -65,9 +63,8 @@ class Encoder(nn.Module):
             nn.ReflectionPad2d(3),
             nn.Conv2d(in_dim, nf, kernel_size=(7, 7), padding=(0, 0), bias=use_bias),
             nn.ReLU(),
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(nf, nf * 2, kernel_size=(7, 7), padding=(0, 0), bias=use_bias),
-            nn.BatchNorm2d(nf * 2),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(nf, nf * 2, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
             nn.ReLU(),
             nn.ReflectionPad2d(1),
             nn.Conv2d(nf * 2, nf * 4, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
@@ -78,11 +75,9 @@ class Encoder(nn.Module):
 
         layers.extend(
             [
-                nn.BatchNorm2d(nf * 4),
                 nn.ReLU(),
                 nn.ReflectionPad2d(1),
                 nn.Conv2d(nf * 4, nf * 4, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),
-                nn.BatchNorm2d(nf * 4),
                 nn.ReLU(),
                 nn.ReflectionPad2d(1),
                 nn.Conv2d(nf * 4, out_dim, kernel_size=(3, 3), padding=(0, 0), bias=use_bias),

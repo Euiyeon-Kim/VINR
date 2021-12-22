@@ -14,7 +14,7 @@ if __name__ == '__main__':
     opt = Config()
     opt.model = 'liif'
     os.makedirs(opt.exp_dir, exist_ok=True)
-    shutil.copy('config.py', f'{opt.exp_dir}/config.py')
+    shutil.copy('../config.py', f'{opt.exp_dir}/config.py')
 
     encoder = Encoder(in_dim=3 * opt.num_frames, out_dim=opt.z_dim)
     liif = LIIF(opt.z_dim)
