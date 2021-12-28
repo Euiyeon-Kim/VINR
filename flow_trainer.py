@@ -70,6 +70,7 @@ def train(opt, model, train_dataloader, val_dataloader):
 
     for epoch in range(opt.epochs):
         model.train()
+        log_loss = 0.0
         for step, data in enumerate(train_dataloader):
             input_frames, target_frame, target_t = data
 
@@ -84,10 +85,12 @@ def train(opt, model, train_dataloader, val_dataloader):
             loss.backward()
             optimizer.step()
 
-            writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
+            log_loss += loss.item()
 
             if step % opt.viz_step == 0:
-                print(loss.item())
+                print(log_loss)
+                writer.add_scalar('recon', log_loss/opt.viz_step, epoch * steps_per_epoch + step)
+                log_loss = 0.0
                 save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
                 save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
 
