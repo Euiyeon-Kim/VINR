@@ -78,7 +78,6 @@ class X4K1000FPS(Dataset):
         last_frame_idx = first_frame_idx + ((self.num_frames - 1) * td)
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
         target_idx = random.randint(first_frame_idx, last_frame_idx)
-
         # scale = random.uniform(1, 2)
 
         # Read frames

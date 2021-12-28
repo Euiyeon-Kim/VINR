@@ -18,7 +18,6 @@ from trainer import save_rgbtensor
 if __name__ == '__main__':
     from test_config import Config
     opt = Config()
-
     os.makedirs(f'{opt.exp_dir}/infer', exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
@@ -27,7 +26,7 @@ if __name__ == '__main__':
     model = VINR(encoder, modulator, mapper)
     model = nn.DataParallel(model).to(device)
 
-    ckpt = torch.load(f'{opt.exp_dir}/ckpt/best.pth')
+    ckpt = torch.load('best.pth')   #f'{opt.exp_dir}/ckpt/best.pth')
     model.load_state_dict(ckpt['model'], strict=False)
 
     # import matplotlib.pyplot as plt
@@ -40,14 +39,13 @@ if __name__ == '__main__':
 
     clips = natsorted(glob(f'{opt.data_root}/val/*/*'))
     total_f = 33
-    target_t = np.linspace((1 / total_f), (1 - (1 / total_f)), (total_f - 1)).reshape((total_f-1, 1))
+    target_t = np.arange(total_f)/32
     target_t = torch.from_numpy(target_t).float()
 
     for clip in clips:
         clip_name = clip.split('/')[-1]
         os.makedirs(f'{opt.exp_dir}/infer/{clip_name}', exist_ok=True)
         inps = natsorted(glob(f'{clip}/*'))
-
         frames = []
         for i in range(0, len(inps), 8):
             frames.append(np.array(Image.open(inps[i]).convert('RGB')))
