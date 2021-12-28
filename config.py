@@ -16,7 +16,7 @@ class Config:
         self.epochs = 1000
         self.viz_step = 100
         self.batch_size = 2
-        self.lr = 2e-4
+        self.lr = 1e-4
         self.min_lr = 1e-6
 
         # LIIF

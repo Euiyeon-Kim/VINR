@@ -34,7 +34,7 @@ def validate(opt, device, model, val_dataloader, epoch):
         target_t = target_t.float().to(device)
 
         with torch.no_grad():
-            pred_frame = model(input_frames, target_t)
+            pred_frame, _, _ = model(input_frames, target_t)
             cur_psnr += psnr(target_frame, pred_frame)
 
     cur_psnr /= len(val_dataloader)
@@ -85,6 +85,7 @@ def train(opt, model, train_dataloader, val_dataloader):
             optimizer.step()
 
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
+
             if step % opt.viz_step == 0:
                 print(loss.item())
                 save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
