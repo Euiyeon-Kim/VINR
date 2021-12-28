@@ -19,8 +19,6 @@ class Config:
         self.lr = 1e-4
         self.min_lr = 1e-6
 
-        # LIIF
-        self.liif_lambda = 0.5
+        # Flow
         self.save_epoch = 20
-        self.lr_size = 24
-        self.scale_max = 4
+        self.flow_lambda = 1.

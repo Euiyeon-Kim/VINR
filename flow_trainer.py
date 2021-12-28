@@ -5,23 +5,13 @@ from torch import nn
 from torch.optim import Adam, lr_scheduler
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
+from trainer import save_rgbtensor, psnr
 
 
-def save_rgbtensor(rgbtensor, path, norm=True):
-    if norm:
-        rgbtensor = (rgbtensor + 1.) / 2.
-    save_image(rgbtensor, path)
-
-
-def psnr(gt, pred, norm=True):
-    if norm:    # (-1, 1) to (0, 255)
-        gt = ((gt + 1.) / 2.) * 255.
-        pred = ((pred + 1.) / 2.) * 255.
-    diff = gt - pred
-    rmse = torch.sqrt(torch.mean(torch.pow(diff, 2)))
-    if rmse == 0:
-        return float('inf')
-    return 20 * torch.log10(255. / rmse)
+def warp_loss(warped, target):
+    B, C, F, H, W = warped.shape
+    gt = torch.unsqueeze(target, 2).repeat(1, 1, F, 1, 1)
+    return torch.nn.L1Loss()(gt, warped)
 
 
 def validate(opt, device, model, val_dataloader, epoch):
@@ -79,18 +69,20 @@ def train(opt, model, train_dataloader, val_dataloader):
             target_t = target_t.float().to(device)
 
             pred_frame, warped, visibilities = model(input_frames, target_t)
-            loss = loss_fn(pred_frame, target_frame)
+
+            flow_loss = warp_loss(warped, target_frame)
+            recon_loss = loss_fn(pred_frame, target_frame)
+            loss = flow_loss * opt.flow_lambda + recon_loss
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            log_loss += loss.item()
+            writer.add_scalar('train/total', loss.item(), epoch * steps_per_epoch + step)
+            writer.add_scalar('train/recon', recon_loss.item(), epoch * steps_per_epoch + step)
+            writer.add_scalar('train/flow', flow_loss.item(), epoch * steps_per_epoch + step)
 
             if step % opt.viz_step == 0:
-                print(log_loss)
-                writer.add_scalar('recon', log_loss/opt.viz_step, epoch * steps_per_epoch + step)
-                log_loss = 0.0
                 save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0]:04f}.png')
                 save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
 
@@ -118,7 +110,7 @@ def train(opt, model, train_dataloader, val_dataloader):
             best_psnr = val_psnr
 
         # Log lr
-        writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
+        writer.add_scalar('train/lr', optimizer.param_groups[0]['lr'], epoch)
         scheduler.step(val_psnr)
 
         if (epoch+1) % opt.save_epoch == 0:
