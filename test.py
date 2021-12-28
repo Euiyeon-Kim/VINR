@@ -26,7 +26,7 @@ if __name__ == '__main__':
     model = VINR(encoder, modulator, mapper)
     model = nn.DataParallel(model).to(device)
 
-    ckpt = torch.load('best.pth')   #f'{opt.exp_dir}/ckpt/best.pth')
+    ckpt = torch.load(f'{opt.exp_dir}/ckpt/best.pth')
     model.load_state_dict(ckpt['model'], strict=False)
 
     # import matplotlib.pyplot as plt
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     clips = natsorted(glob(f'{opt.data_root}/val/*/*'))
     total_f = 33
-    target_t = np.arange(total_f)/32
+    target_t = np.expand_dims(np.arange(total_f)/32, -1)
     target_t = torch.from_numpy(target_t).float()
 
     for clip in clips:

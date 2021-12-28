@@ -4,10 +4,11 @@ import shutil
 from torch import nn
 
 from config import Config
-from trainer import train
+from flow_trainer import train
 from dataloader import get_dataloader
 from common_model import Encoder
-from mod_model import Modulator, ModRGBMapper, VINR
+from mod_model import Modulator
+from mod_flow_model import ModMapper, VINR
 
 
 if __name__ == '__main__':
@@ -18,9 +19,11 @@ if __name__ == '__main__':
 
     encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
     modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
-    mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
+    mod_generator = ModMapper(out_dim=opt.num_frames*3, hidden_node=256, depth=5)
 
-    model = VINR(encoder, modulator, mapper)
+    import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = VINR(encoder, modulator, mod_generator, device, opt.num_frames)
     model = nn.DataParallel(model)
 
     train_dataloader, val_dataloader = get_dataloader(opt)

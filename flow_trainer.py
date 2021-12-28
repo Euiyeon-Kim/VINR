@@ -54,6 +54,8 @@ def train(opt, model, train_dataloader, val_dataloader):
     os.makedirs(f'{opt.exp_dir}/imgs', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/val', exist_ok=True)
+    os.makedirs(f'{opt.exp_dir}/flow', exist_ok=True)
+
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
     model = model.to(device)
@@ -75,7 +77,7 @@ def train(opt, model, train_dataloader, val_dataloader):
             target_frame = target_frame.to(device)
             target_t = target_t.float().to(device)
 
-            pred_frame = model(input_frames, target_t)
+            pred_frame, warped, visibilities = model(input_frames, target_t)
             loss = loss_fn(pred_frame, target_frame)
 
             optimizer.zero_grad()
@@ -92,6 +94,16 @@ def train(opt, model, train_dataloader, val_dataloader):
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
                     save_rgbtensor(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+
+                viz_warp = warped[0].permute(1, 0, 2, 3)
+                viz_warp = (viz_warp + 1.) / 2.
+                for idx, img in enumerate(viz_warp):
+                    save_rgbtensor(img, f'{opt.exp_dir}/flow/{epoch}_{step}_w{idx}.png', norm=False)
+
+                viz_mask = visibilities[0].permute(2, 0, 1)
+                for idx, img in enumerate(viz_mask):
+                    save_image(torch.unsqueeze(img, 0),
+                               f'{opt.exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png')
 
         # Validate - save best model
         val_psnr = validate(opt, device, model, val_dataloader, epoch)
