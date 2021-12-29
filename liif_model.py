@@ -5,54 +5,57 @@ import torch.nn.functional as F
 from common_model import LFF, SirenLayer
 
 
-class Modulator(nn.Module):
-    def __init__(self, in_f, hidden_node=256, depth=4):
-        super(Modulator, self).__init__()
-        self.hidden_node = hidden_node
-        self.layers = nn.ModuleList([])
+class ResBlock3D(nn.Module):
+    def __init__(self, nf):
+        super(ResBlock3D, self).__init__()
+        self.conv3x3_1 = nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1))
+        self.conv3x3_2 = nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1))
+        self.lrelu = nn.ReLU()
 
-        for i in range(depth):
-            dim = in_f if i == 0 else (hidden_node + in_f)
-            self.layers.append(nn.Sequential(
-                nn.Linear(dim, hidden_node),
-                nn.ReLU()
-            ))
-
-    def forward(self, z):
-        b, hw, z_dim = z.shape
-        z = z.contiguous().view(-1, z_dim)
-        x = z
-        alphas = []
-        for layer in self.layers:
-            x = layer(x)
-            alpha = x.view(b, hw, self.hidden_node)
-            alphas.append(alpha)
-            x = torch.cat((x, z), dim=-1)
-        return tuple(alphas)
+    def forward(self, x):
+        B, C, F, H, W = x.size()
+        out = self.conv3x3_2(self.lrelu(self.conv3x3_1(x)))
+        return x + out
 
 
-class ModRGBMapper(nn.Module):
-    def __init__(self, out_dim=3, w0=200, hidden_node=256, depth=5):
-        super(ModRGBMapper, self).__init__()
-        self.lff = LFF(1, hidden_node)
-        self.depth = depth
+class RResBlock3D(nn.Module):
+    def __init__(self, nf, reduce_f=False):
+        super(RResBlock3D, self).__init__()
+        self.nf = nf
+        self.reduce_f = reduce_f
+        self.resblock1 = ResBlock3D(nf)
+        self.resblock2 = ResBlock3D(nf)
+        if reduce_f:
+            self.reduceT_conv = nn.Conv3d(nf, nf, (3, 1, 1), (1, 1, 1), (0, 0, 0))
 
-        layers = [SirenLayer(in_f=hidden_node, out_f=hidden_node, w0=w0, is_first=True)]
-        for _ in range(1, depth - 1):
-            layers.append(SirenLayer(in_f=hidden_node, out_f=hidden_node, w0=w0))
+    def forward(self, x):
+        out = self.resblock1(x)
+        out = self.resblock2(out)
+        if self.reduce_f:
+            return self.reduceT_conv(out + x)
+        else:
+            return out + x
 
-        self.layers = nn.Sequential(*layers)
-        self.last_layer = SirenLayer(in_f=hidden_node, out_f=out_dim, is_last=True)
 
-    def forward(self, t, mod_params):
-        b, hw, hidden = mod_params[0].shape
-        x = self.lff(t).unsqueeze(1).repeat(1, hw, 1)
-        for layer, mod in zip(self.layers, mod_params):
-            x = layer(x)
-            x *= mod
-        x = self.last_layer(x)
-        x = torch.clamp(x, min=-1, max=1)
-        return x
+class Encoder(nn.Module):
+    def __init__(self, in_c=3, nf=64, n_blocks=2):
+        super(Encoder, self).__init__()
+        self.channel_converter = nn.Sequential(
+            nn.Conv3d(in_c, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)),
+            nn.ReLU()
+        )
+        self.rec_ext_ds_module = [self.channel_converter]
+        self.rec_ext_ds = nn.Conv3d(nf, nf, (1, 3, 3), (1, 2, 2), (0, 1, 1))
+        for _ in range(n_blocks):
+            self.rec_ext_ds_module.append(self.rec_ext_ds)
+            self.rec_ext_ds_module.append(nn.ReLU())
+        self.rec_ext_ds_module.append(nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)))
+        self.rec_ext_ds_module.append(RResBlock3D(nf, reduce_f=False))
+        self.rec_ext_ds_module = nn.Sequential(*self.rec_ext_ds_module)
+
+    def forward(self, x):
+        feat_x = self.rec_ext_ds_module(x)
+        return feat_x
 
 
 class LIIF(nn.Module):
@@ -190,24 +193,21 @@ class VINR(nn.Module):
 
 
 if __name__ == '__main__':
-    num_frame = 5
+    num_frame = 4
     z_dim = 50
 
-    from common_model import Encoder
-    from mod_model import Modulator, ModRGBMapper
+    encoder = Encoder(in_c=3, nf=z_dim, n_blocks=2)
+    z = encoder(torch.randn((4, 3, num_frame, 384, 384)))
 
-    encoder = Encoder(in_dim=3*num_frame, out_dim=z_dim)
-    z = encoder(torch.randn((4, 3, 5, 32, 32)))
+    # liif = LIIF()
+    # continuous_feature = liif(z)
 
-    liif = LIIF()
-    continuous_feature = liif(z)
-
-    modulator = Modulator(continuous_feature, 256, 4)
-    mod_params = modulator(z)
-
-    mapper = ModRGBMapper(out_dim=3)
-    rgb = mapper(torch.rand(4, 1), mod_params)
-
-    model = VINR(encoder, modulator, mapper)
-    out = model(torch.rand((4, 3, num_frame, 32, 32)), torch.rand(4))
-    print(out.shape)
+    # modulator = Modulator(continuous_feature, 256, 4)
+    # mod_params = modulator(z)
+    #
+    # mapper = ModRGBMapper(out_dim=3)
+    # rgb = mapper(torch.rand(4, 1), mod_params)
+    #
+    # model = VINR(encoder, modulator, mapper)
+    # out = model(torch.rand((4, 3, num_frame, 32, 32)), torch.rand(4))
+    # print(out.shape)
