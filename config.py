@@ -22,3 +22,6 @@ class Config:
         # Flow
         self.save_epoch = 20
         self.flow_lambda = 1.
+
+        # LIIF
+        self.sample_q = None

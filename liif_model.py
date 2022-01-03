@@ -149,7 +149,7 @@ class LIIF(nn.Module):
                 rel_cell[:, :, 1] *= W
                 inp = torch.cat([inp, rel_cell], dim=-1)
 
-                B, Q = coord.shape[:2]
+                B, Q = query_coord.shape[:2]
                 mod_params = self.modulator(inp.view(B * Q, -1), B, Q)
 
                 preds.append(mod_params)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
 
     mapper = ModRGBMapper(out_dim=3)
     rgb = mapper(torch.rand(batch_size, 1), mod_params)
-
+    print(coord.shape, cell.shape)
     model = VINR(encoder, liif, mapper)
     out = model(torch.rand((batch_size, 3, num_frames, h, w)), coord, cell, torch.rand(batch_size, 1))
     print(out.shape)
