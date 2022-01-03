@@ -61,15 +61,29 @@ class VINR(nn.Module):
         self.mapper = mapper
 
     def forward(self, frames, t):
-        encoded = self.encoder(frames)
+        feat = self.get_feat(frames)
+        rgb = self.get_rgb(feat, t)
+        return rgb
 
+    def get_feat(self, frames):
+        encoded = self.encoder(frames)
         min_v = torch.min(encoded, dim=1, keepdim=True)[0]
         max_v = torch.max(encoded, dim=1, keepdim=True)[0]
         normalized = (((encoded - min_v) / (max_v - min_v)) - 0.5) * 2.0    # (-1, 1)
+        return normalized
 
+    def get_rgb(self, normalized, t):
         mod_params = self.modulator(normalized)
         rgb = self.mapper(t.unsqueeze(-1), mod_params).permute(0, 3, 1, 2)
         return rgb
+
+
+class VINRDataParallel(nn.DataParallel):
+    def __getattr__(self, name):
+        if name == 'module':
+            return self._modules['module']
+        else:
+            return getattr(self.module, name)
 
 
 if __name__ == '__main__':

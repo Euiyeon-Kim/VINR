@@ -7,7 +7,7 @@ from config import Config
 from trainer import train
 from dataloader import get_dataloader
 from common_model import Encoder
-from mod_model import Modulator, ModRGBMapper, VINR
+from mod_model import Modulator, ModRGBMapper, VINR, VINRDataParallel
 
 
 if __name__ == '__main__':
@@ -21,7 +21,8 @@ if __name__ == '__main__':
     mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
 
     model = VINR(encoder, modulator, mapper)
-    model = nn.DataParallel(model)
+    # model = nn.DataParallel(model)
+    model = VINRDataParallel(model)
 
     train_dataloader, val_dataloader = get_dataloader(opt)
 

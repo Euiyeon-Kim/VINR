@@ -67,6 +67,7 @@ class X4K1000FPS(Dataset):
         return frames, target_t
 
     def get_test_item(self, frame_paths):
+        clip_dir = frame_paths[0].split('/')[-2]
         selected_idx = np.linspace(0, 32, self.num_frames).astype(int)
         target_idxs = np.arange(33)
 
@@ -79,10 +80,10 @@ class X4K1000FPS(Dataset):
 
         target_ts = target_idxs / 32.
 
-        frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
+        frames = frames.transpose((0, 3, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))
 
-        return frames[:, :self.num_frames, :, :], frames[:, self.num_frames:, :, :], target_ts
+        return frames[:self.num_frames, :, :, :], frames[self.num_frames:, :, :, :], target_ts, clip_dir
 
     def __getitem__(self, item):        # B, C, T, H, W
         cur_clip = self.clips[item]
@@ -271,10 +272,10 @@ if __name__ == '__main__':
     config.model = 'mod'
     train, val = get_dataloader(config)
 
-    for d in train:
-        inp, target, t = d
-        print(inp.shape, target.shape, t.shape)
-        break
+    # for d in train:
+    #     inp, target, t = d
+    #     print(inp.shape, target.shape, t.shape)
+    #     break
 
     for d in val:
         inp, target, t = d

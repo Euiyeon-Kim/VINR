@@ -25,27 +25,31 @@ def psnr(gt, pred, norm=True):
 
 
 def validate(opt, device, model, val_dataloader, epoch):
-    cur_psnr = 0
     model.eval()
+    total_psnr = 0.
     for data in val_dataloader:
-        input_frames, target_frame, target_t = data
+        input_frames, target_frames, target_ts, clip_name = data
+        os.makedirs(f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
+
         input_frames = input_frames.to(device)
-        target_frame = target_frame.to(device)
-        target_t = target_t.float().to(device)
+        target_frames = torch.unsqueeze(torch.squeeze(target_frames), 1).to(device)
+        target_ts = target_ts.transpose(1, 0).float().to(device)
+        num_t, _ = target_ts.shape
 
+        cur_psnr = 0.
         with torch.no_grad():
-            pred_frame = model(input_frames, target_t)
-            cur_psnr += psnr(target_frame, pred_frame)
+            feat = model.get_feat(input_frames)
+            for t, f in zip(target_ts, target_frames):
+                pred_frame = model.get_rgb(feat, t)
+                cur_psnr += psnr(f, pred_frame)
+                pred_frame = (pred_frame + 1.) / 2.
+                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
-    cur_psnr /= len(val_dataloader)
-    save_rgbtensor(target_frame[0], f'{opt.exp_dir}/val/{epoch}_gt_{target_t[0]:04f}.png')
-    save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}_pred.png')
-    viz_input = input_frames[0].permute(1, 0, 2, 3)
-    viz_input = (viz_input + 1.) / 2.
-    for idx, img in enumerate(viz_input):
-        save_rgbtensor(img, f'{opt.exp_dir}/val/{epoch}_{idx}.png', norm=False)
+        total_psnr = total_psnr + (cur_psnr / num_t)
 
-    return cur_psnr.item()
+    total_psnr /= len(val_dataloader)
+    print(total_psnr)
+    return total_psnr.item()
 
 
 def train(opt, model, train_dataloader, val_dataloader):
@@ -105,6 +109,6 @@ def train(opt, model, train_dataloader, val_dataloader):
         writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
         scheduler.step(val_psnr)
 
-        if (epoch+1) % opt.save_epoch == 0:
+        if epoch != 0 and epoch % opt.save_epoch == 0:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                        f'{opt.exp_dir}/ckpt/{epoch}.pth')
