@@ -47,7 +47,7 @@ def validate(opt, device, model, val_dataloader, epoch):
         total_psnr = total_psnr + (cur_psnr / num_t)
 
     total_psnr /= len(val_dataloader)
-    print(total_psnr)
+    print(total_psnr.item())
     return total_psnr.item()
 
 
