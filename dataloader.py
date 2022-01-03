@@ -70,9 +70,9 @@ class X4K1000FPS(Dataset):
         target_ts = target_idxs / 32.
 
         # ======================= For Debug ======================
-        h, w, c = 102, 102, 3
-        ix = random.randrange(0, w - self.patch_size + 1)
-        iy = random.randrange(0, h - self.patch_size + 1)
+        # h, w, c = 102, 102, 3
+        # ix = random.randrange(0, w - self.patch_size + 1)
+        # iy = random.randrange(0, h - self.patch_size + 1)
         frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
         # ==============================================
 
