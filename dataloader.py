@@ -24,10 +24,9 @@ def get_dataloader(opt):
     elif opt.model == 'mod':
         train_dataset = X4K1000FPS(opt, f'{opt.data_root}/train', True)
         val_dataset = X4K1000FPS(opt, f'{opt.data_root}/val', False)
-        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
-                                      num_workers=opt.num_workers)
-        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
-                                    num_workers=opt.num_workers)
+        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True,
+                                      drop_last=False, num_workers=opt.num_workers)
+        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=1)
     return train_dataloader, val_dataloader
 
 
@@ -67,13 +66,35 @@ class X4K1000FPS(Dataset):
 
         return frames, target_t
 
+    def get_test_item(self, frame_paths):
+        selected_idx = np.linspace(0, 32, self.num_frames).astype(int)
+        target_idxs = np.arange(33)
+
+        frames = []
+        for idx in selected_idx:
+            frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+        for idx in target_idxs:
+            frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+        frames = np.stack(frames, axis=0)
+
+        target_ts = target_idxs / 32.
+
+        frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
+        frames = torch.Tensor(frames.astype(float))
+
+        return frames[:, :self.num_frames, :, :], frames[:, self.num_frames:, :, :], target_ts
+
     def __getitem__(self, item):        # B, C, T, H, W
         cur_clip = self.clips[item]
         frame_paths = natsorted(glob(f'{cur_clip}/*.png'))
         assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
 
-        # Set options
-        td = random.randint(2, random.randint(2, int((self.total_frame - 1) / (self.num_frames - 1))))
+        if not self.is_train:       # Test and validate dataloader
+            return self.get_test_item(frame_paths)
+
+        # Set train options
+        max_td = 32 if self.num_frames == 2 else int((self.total_frame - 1) / (self.num_frames - 1))
+        td = random.randint(2, max_td)
         first_frame_idx = random.randint(0, (self.total_frame - 1) - ((self.num_frames - 1) * td))
         last_frame_idx = first_frame_idx + ((self.num_frames - 1) * td)
         selected_idx = np.linspace(first_frame_idx, last_frame_idx, self.num_frames).astype(int)
@@ -88,14 +109,12 @@ class X4K1000FPS(Dataset):
             # small_h, small_w = int(h / scale), int(w / scale)
             # frames.append(np.array(f.resize((small_h, small_w))))
             frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+
         # target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB').resize((small_h, small_w)))
         target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
-        if self.is_train:
-            frames, target_t = self.augment(frames, target_frame, target_t)
-        else:
-            frames = np.stack(frames + [target_frame], axis=0)
+        frames, target_t = self.augment(frames, target_frame, target_t)
 
         frames = frames.transpose((3, 0, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))
@@ -251,6 +270,11 @@ if __name__ == '__main__':
     config = Config()
     config.model = 'mod'
     train, val = get_dataloader(config)
+
+    for d in train:
+        inp, target, t = d
+        print(inp.shape, target.shape, t.shape)
+        break
 
     for d in val:
         inp, target, t = d
