@@ -2,7 +2,6 @@ import math
 import random
 from glob import glob
 
-
 import torch
 import numpy as np
 from PIL import Image
@@ -11,22 +10,12 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def get_dataloader(opt):
-    if opt.model == 'liif':
-        train_dataset = X4KLIIF(f'{opt.data_root}/train', opt.num_frames, opt.patch_size,
-                                scale_max=opt.scale_max, lr_size=opt.lr_size)
-        val_dataset = X4KLIIF(f'{opt.data_root}/val', opt.num_frames, opt.patch_size, False,
-                              scale_max=opt.scale_max, lr_size=opt.lr_size)
-        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, drop_last=False,
-                                      num_workers=opt.num_workers)
-        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False,
-                                    num_workers=opt.num_workers)
-
-    elif opt.model == 'mod':
-        train_dataset = X4K1000FPS(opt, f'{opt.data_root}/train', True)
-        val_dataset = X4K1000FPS(opt, f'{opt.data_root}/val', False)
-        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True,
+    dataset = X4KLIIF if opt.model == 'liif' else X4K1000FPS
+    train_dataset = dataset(opt, f'{opt.data_root}/train', True)
+    val_dataset = dataset(opt, f'{opt.data_root}/val', False)
+    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True,
                                       drop_last=False, num_workers=opt.num_workers)
-        val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=1)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=1)
     return train_dataloader, val_dataloader
 
 
@@ -81,16 +70,19 @@ class X4K1000FPS(Dataset):
         target_ts = target_idxs / 32.
 
         # ======================= For Debug ======================
-        # h, w, c = 96, 96, 3
-        # ix = random.randrange(0, w - self.patch_size + 1)
-        # iy = random.randrange(0, h - self.patch_size + 1)
-        # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+        h, w, c = 102, 102, 3
+        ix = random.randrange(0, w - self.patch_size + 1)
+        iy = random.randrange(0, h - self.patch_size + 1)
+        frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
         # ==============================================
 
         frames = frames.transpose((0, 3, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))
 
-        return frames[:self.num_frames, :, :, :], frames[self.num_frames:, :, :, :], target_ts, clip_dir
+        inp_frames = frames[:self.num_frames, :, :, :].permute((1, 0, 2, 3))
+        target_frames = frames[self.num_frames:, :, :, :]
+
+        return inp_frames, target_frames, target_ts, clip_dir
 
     def __getitem__(self, item):        # B, C, T, H, W
         cur_clip = self.clips[item]
@@ -131,16 +123,11 @@ class X4K1000FPS(Dataset):
 
 
 class X4KLIIF(Dataset):
-    def __init__(self, data_root, num_frames, patch_size, is_train=True, scale_min=1, scale_max=4, lr_size=96):
+    def __init__(self, opt, root, is_train=True):
         super(X4KLIIF, self).__init__()
+        self.opt = opt
+        self.clips = glob(f'{root}/*/*')
         self.is_train = is_train
-        self.scale_min = scale_min
-        self.scale_max = scale_max
-        self.lr_size = lr_size
-        self.sample_q = lr_size * lr_size
-        self.num_frames = num_frames
-        self.patch_size = patch_size
-        self.clips = glob(f'{data_root}/*/*')
         self.total_frame = 65 if self.is_train else 33
 
     def __len__(self):
@@ -276,15 +263,15 @@ class X4KLIIF(Dataset):
 if __name__ == '__main__':
     from config import Config
     config = Config()
-    config.model = 'mod'
+    config.model = 'liif'   # 'mod'
     train, val = get_dataloader(config)
 
-    # for d in train:
-    #     inp, target, t = d
-    #     print(inp.shape, target.shape, t.shape)
-    #     break
-
-    for d in val:
+    for d in train:
         inp, target, t = d
         print(inp.shape, target.shape, t.shape)
+        break
+
+    for d in val:
+        inp, target, t, name = d
+        print(inp.shape, target.shape, t.shape, name[0])
         exit()

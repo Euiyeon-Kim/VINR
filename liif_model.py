@@ -19,27 +19,23 @@ class ResBlock3D(nn.Module):
 
 
 class RResBlock3D(nn.Module):
-    def __init__(self, nf, reduce_f=False):
+    def __init__(self, nf, num_frames, reduce_f=False):
         super(RResBlock3D, self).__init__()
         self.nf = nf
         self.reduce_f = reduce_f
         self.resblock1 = ResBlock3D(nf)
         self.resblock2 = ResBlock3D(nf)
-        if reduce_f:
-            self.reduceT_conv = nn.Conv3d(nf, nf, (3, 1, 1), (1, 1, 1), (0, 0, 0))
+        self.reduceT_conv = nn.Conv3d(nf, nf, (num_frames, 1, 1), (1, 1, 1), (0, 0, 0))
 
     def forward(self, x):
         out = self.resblock1(x)
         out = self.resblock2(out)
-        if self.reduce_f:
-            return self.reduceT_conv(out + x)
-        else:
-            return out + x
+        return torch.squeeze(self.reduceT_conv(out + x))
 
 
-class Encoder(nn.Module):
-    def __init__(self, in_c=3, nf=64, n_blocks=2):
-        super(Encoder, self).__init__()
+class XVFIEncoder(nn.Module):
+    def __init__(self, in_c=3, num_frames=5, nf=64, n_blocks=2):
+        super(XVFIEncoder, self).__init__()
         self.channel_converter = nn.Sequential(
             nn.Conv3d(in_c, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)),
             nn.ReLU()
@@ -50,7 +46,7 @@ class Encoder(nn.Module):
             self.rec_ext_ds_module.append(self.rec_ext_ds)
             self.rec_ext_ds_module.append(nn.ReLU())
         self.rec_ext_ds_module.append(nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)))
-        self.rec_ext_ds_module.append(RResBlock3D(nf, reduce_f=False))
+        self.rec_ext_ds_module.append(RResBlock3D(nf, num_frames=num_frames, reduce_f=False))
         self.rec_ext_ds_module = nn.Sequential(*self.rec_ext_ds_module)
 
     def forward(self, x):
@@ -59,21 +55,21 @@ class Encoder(nn.Module):
 
 
 class LIIF(nn.Module):
-    def __init__(self, z_dim, hidden_node=256, depth=5):
+    # Unfold된 z와 상대좌표, cell크기 를 받아서 해당 상대 좌표의 mod param 생성
+    def __init__(self, z_dim, hidden_node=256, depth=4):
         super(LIIF, self).__init__()
         self.in_f = z_dim * 9 + 4      # feature unfold(*9) / coord concat(+2) / cell size concat(+2)
 
-        layers = []
-        for i in range(depth - 1):
-            dim = self.in_f if i == 0 else hidden_node
-            layers.append(nn.Sequential(
+        self.layers = nn.ModuleList([])
+        for i in range(depth):
+            dim = self.in_f if i == 0 else (hidden_node + self.in_f)
+            self.layers.append(nn.Sequential(
                 nn.Linear(dim, hidden_node),
                 nn.ReLU()
             ))
-        layers.append(nn.Linear(hidden_node, z_dim))
-        self.layers = nn.Sequential(*layers)
 
     def make_coord(self, shape, ranges=None, flatten=True):
+        # Range를 shape등분 한 grid에서 각 cell의 center 좌표 반환
         coord_seqs = []
         for i, n in enumerate(shape):
             if ranges is None:
@@ -89,16 +85,19 @@ class LIIF(nn.Module):
         return ret
 
     def forward(self, x, coord, cell):
-        # x: B z_dim H W / coord: B sample 2
-        feat = F.unfold(x, 3, padding=1).view(x.shape[0], x.shape[1] * 9, x.shape[2], x.shape[3])
-        vx_lst = [-1, 1]
-        vy_lst = [-1, 1]
-        eps_shift = 1e-6
-        rx = 2 / feat.shape[-2] / 2        # grid 한 칸의 반
-        ry = 2 / feat.shape[-1] / 2        # grid 한 칸의 반
+        # x(feature): (B, z_dim, H, W)
+        # coord: (B, sample, 2)
+        B, z_dim, H, W = x.shape
 
-        feat_coord = self.make_coord(feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1)\
-            .unsqueeze(0).expand(feat.shape[0], 2, *feat.shape[-2:])
+        # 주변 3*3 feature concat
+        unfold_feat = F.unfold(x, 3, padding=1).view(B, z_dim * 9, H, W)
+
+        vx_lst, vy_lst = [-1, 1], [-1, 1]
+        eps_shift = 1e-6
+
+        rh, rw = 1 / H, 1 / W   # Global grid 범위가 (-1, 1)일 때 grid 한 칸의 radius h, w 크기
+        feat_coord = self.make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
+            unsqueeze(0).expand(B, 2, H, W)
 
         preds = []
         areas = []
@@ -106,8 +105,8 @@ class LIIF(nn.Module):
         for vx in vx_lst:
             for vy in vy_lst:
                 coord_ = coord.clone()
-                coord_[:, :, 0] += vx * rx + eps_shift
-                coord_[:, :, 1] += vy * ry + eps_shift
+                coord_[:, :, 0] += vx * rh + eps_shift
+                coord_[:, :, 1] += vy * rw + eps_shift
                 coord_.clamp_(-1 + 1e-6, 1 - 1e-6)
                 q_feat = F.grid_sample(
                     feat, coord_.flip(-1).unsqueeze(1),
@@ -193,14 +192,17 @@ class VINR(nn.Module):
 
 
 if __name__ == '__main__':
-    num_frame = 4
+    batch_size = 7
+    num_frames = 5
     z_dim = 50
+    h, w = 96, 96
+    encoder = XVFIEncoder(in_c=3, num_frames=num_frames, nf=z_dim, n_blocks=2)
+    z = encoder(torch.randn((batch_size, 3, num_frames, h, w)))
 
-    encoder = Encoder(in_c=3, nf=z_dim, n_blocks=2)
-    z = encoder(torch.randn((4, 3, num_frame, 384, 384)))
-
-    # liif = LIIF()
-    # continuous_feature = liif(z)
+    coord = None
+    cell = None
+    liif = LIIF(z_dim)
+    continuous_feature = liif(z, coord, cell)
 
     # modulator = Modulator(continuous_feature, 256, 4)
     # mod_params = modulator(z)

@@ -73,7 +73,6 @@ def train(opt, model, train_dataloader, val_dataloader):
         model.train()
         for step, data in enumerate(train_dataloader):
             input_frames, target_frame, target_t = data
-
             input_frames = input_frames.to(device)
             target_frame = target_frame.to(device)
             target_t = target_t.float().to(device)
