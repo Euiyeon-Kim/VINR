@@ -42,7 +42,6 @@ def validate(opt, device, model, val_dataloader, epoch):
             for t, f in zip(target_ts, target_frames):
                 pred_frame = model.get_rgb(feat, t)
                 cur_psnr += psnr(f, pred_frame)
-                pred_frame = (pred_frame + 1.) / 2.
                 save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
         total_psnr = total_psnr + (cur_psnr / num_t)
