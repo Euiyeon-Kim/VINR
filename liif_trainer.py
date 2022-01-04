@@ -5,6 +5,8 @@ from torch import nn
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
+from trainer import save_rgbtensor
+
 
 def train(opt, model, train_dataloader, val_dataloader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -41,6 +43,9 @@ def train(opt, model, train_dataloader, val_dataloader):
             optimizer.step()
 
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
+            if step % opt.viz_step == 0:
+                print(loss.item())
+                save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{t[0]:04f}.png')
 
         # Log lr
         writer.add_scalar('train/learning_rate', scheduler.get_last_lr()[0], epoch)
@@ -48,7 +53,6 @@ def train(opt, model, train_dataloader, val_dataloader):
 
         # Save best psnr model
         if (epoch + 1) % opt.save_epoch == 0:
-
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                        f'{opt.exp_dir}/ckpt/{epoch+1}.pth')
 

@@ -1,10 +1,10 @@
 class Config:
     def __init__(self):
-        self.exp_name = 'mod_debug'
+        self.exp_name = 'liif_debug'
         self.exp_dir = f'exps/{self.exp_name}'
         self.mode = 'train'     # 'train' or 'test'
 
-        self.z_dim = 64
+        self.z_dim = 32
         self.num_frames = 5
 
         # Dataset

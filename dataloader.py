@@ -255,16 +255,16 @@ if __name__ == '__main__':
     from config import Config
     config = Config()
 
-    config.model = 'mod'
-    train, val = get_dataloader(config)
-    for d in train:
-        inp, target, t = d
-        print(inp.shape, target.shape, t.shape)
-        break
-    for d in val:
-        inp, target, t, name = d
-        print(inp.shape, target.shape, t.shape, name[0])
-        exit()
+    # config.model = 'mod'
+    # train, val = get_dataloader(config)
+    # for d in train:
+    #     inp, target, t = d
+    #     print(inp.shape, target.shape, t.shape)
+    #     break
+    # for d in val:
+    #     inp, target, t, name = d
+    #     print(inp.shape, target.shape, t.shape, name[0])
+    #     exit()
 
     config.model = 'liif'   # 'mod'
     train, val = get_dataloader(config)
