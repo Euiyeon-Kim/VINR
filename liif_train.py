@@ -6,6 +6,7 @@ from torch import nn
 from config import Config
 from liif_trainer import train
 from dataloader import get_dataloader
+from mod_model import VINRDataParallel
 from liif_model import XVFIEncoder, LIIF, ModRGBMapper, VINR
 
 
@@ -19,7 +20,8 @@ if __name__ == '__main__':
     liif = LIIF(opt.z_dim)
     mapper = ModRGBMapper(out_dim=3)
     model = VINR(encoder, liif, mapper)
-    model = nn.DataParallel(model)
+    # model = nn.DataParallel(model)
+    model = VINRDataParallel(model)
 
     train_dataloader, val_dataloader = get_dataloader(opt)
 

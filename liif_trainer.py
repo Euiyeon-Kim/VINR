@@ -5,7 +5,34 @@ from torch import nn
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer import save_rgbtensor
+from trainer import save_rgbtensor, psnr
+
+
+def validate(opt, device, model, val_dataloader, epoch):
+    model.eval()
+    total_psnr = 0.
+    for data in val_dataloader:
+        input_frames, target_frames, target_ts, coord, rgb, cell, clip_name = data
+        os.makedirs(f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
+
+        input_frames = input_frames.to(device)
+        target_frames = torch.unsqueeze(torch.squeeze(target_frames), 1).to(device)
+        target_ts = target_ts.transpose(1, 0).float().to(device)
+        num_t, _ = target_ts.shape
+
+        cur_psnr = 0.
+        with torch.no_grad():
+            feat = model.get_feat(input_frames)
+            for t, f in zip(target_ts, target_frames):
+                pred_frame = model.get_rgb(feat, t)
+                cur_psnr += psnr(f, pred_frame)
+                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
+
+        total_psnr = total_psnr + (cur_psnr / num_t)
+
+    total_psnr /= len(val_dataloader)
+    print(total_psnr.item())
+    return total_psnr.item()
 
 
 def train(opt, model, train_dataloader, val_dataloader):

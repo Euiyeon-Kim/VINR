@@ -201,9 +201,21 @@ class VINR(nn.Module):
         self.liif = liif
         self.mapper = mapper
 
+    # Normalizing?
     def forward(self, frames, query_coord, cell, t):
+        feat = self.get_feat(frames)
+        pred = self.get_rgb(feat, query_coord, cell, t)
+        # z = self.encoder(frames)
+        # mod_params = self.liif(z, query_coord, cell)
+        # pred = self.mapper(t, mod_params)
+        return pred
+
+    def get_feat(self, frames):
         z = self.encoder(frames)
-        mod_params = self.liif(z, query_coord, cell)
+        return z
+
+    def get_rgb(self, feat, query_coord, cell, t):
+        mod_params = self.liif(feat, query_coord, cell)
         pred = self.mapper(t, mod_params)
         return pred
 
