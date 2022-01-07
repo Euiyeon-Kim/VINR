@@ -173,10 +173,8 @@ class X4KLIIF(Dataset):
         rgb = img.view(3, -1).permute(1, 0)
         return coord, rgb
 
-    def make_liif_data(self, frames):
-        # frames: T, H, W, C
-        target_frame = frames[-1, :, :, :]
-
+    def make_liif_data(self, target_frame):
+        # target_frame: H, W, C
         target_frame = target_frame.transpose((2, 0, 1)) / 127.5 - 1
         target_frame = torch.Tensor(target_frame.astype(float))
         target_coord, target_rgb = self.to_pixel_samples(target_frame.contiguous())
@@ -206,20 +204,29 @@ class X4KLIIF(Dataset):
         frames = []
         for idx in selected_idx:
             frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
-        for idx in target_idxs:
-            frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
         frames = np.stack(frames, axis=0)
 
+        target_frames = []
+        for idx in target_idxs:
+            target_frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
+        target_frames = np.stack(target_frames, axis=0)
+
         target_ts = target_idxs / 32.
-        target_coord, target_rgb, cell = self.make_liif_data(frames)
+        target_coords, target_rgbs, cells = [], [], []
+        for target_frame in target_frames:
+            target_coord, target_rgb, cell = self.make_liif_data(target_frame)
+            target_coords.append(target_coord)
+            target_rgbs.append(target_rgb)
+            cells.append(cell)
+
+        target_coords = torch.stack(target_coords)
+        target_rgbs = torch.stack(target_rgbs)
+        cells = torch.stack(cells)
 
         frames = frames.transpose((0, 3, 1, 2)) / 127.5 - 1
-        frames = torch.Tensor(frames.astype(float))
+        frames = torch.Tensor(frames.astype(float)).permute(1, 0, 2, 3)
 
-        inp_frames = frames[:self.num_frames, :, :, :].permute((1, 0, 2, 3))
-        target_frames = frames[self.num_frames:, :, :, :]
-
-        return inp_frames, target_frames, target_ts, target_coord, target_rgb, cell, clip_dir
+        return frames, target_ts, target_coords, target_rgbs, cells, clip_dir
 
     def __getitem__(self, item):
         cur_clip = self.clips[item]
@@ -245,7 +252,7 @@ class X4KLIIF(Dataset):
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
         frames, target_t = self.augment(origin_frames, origin_target_frame, target_t)
-        target_coord, target_rgb, cell = self.make_liif_data(frames)
+        target_coord, target_rgb, cell = self.make_liif_data(frames[-1, :, :, :])
 
         frames = self.norm_and_to_tensor(frames)
         return frames[:, :-1, :, :], frames[:, -1, :, :], target_t, target_coord, target_rgb, cell
@@ -273,6 +280,6 @@ if __name__ == '__main__':
         print(inp.shape, target.shape, t.shape, coord.shape, rgb.shape, cell.shape)
         break
     for d in val:
-        inp, target, t, coord, rgb, cell, name = d
-        print(inp.shape, target.shape, t.shape, coord.shape, rgb.shape, cell.shape, name[0])
+        inp, t, coord, rgb, cell, name = d
+        print(inp.shape, t.shape, coord.shape, rgb.shape, cell.shape, name[0])
         exit()

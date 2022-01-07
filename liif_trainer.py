@@ -12,19 +12,26 @@ def validate(opt, device, model, val_dataloader, epoch):
     model.eval()
     total_psnr = 0.
     for data in val_dataloader:
-        input_frames, target_frames, target_ts, coord, rgb, cell, clip_name = data
-        os.makedirs(f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
+        input_frames, target_ts, target_coords, target_rgbs, cells, clip_name = data
 
+        os.makedirs(f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
         input_frames = input_frames.to(device)
-        target_frames = torch.unsqueeze(torch.squeeze(target_frames), 1).to(device)
         target_ts = target_ts.transpose(1, 0).float().to(device)
+        target_coords = target_coords.to(device).permute(1, 0, 2, 3)
+        target_rgbs = target_rgbs.to(device).permute(1, 0, 2, 3)
+        cells = cells.to(device).permute(1, 0, 2, 3)
+
+        # print(target_ts.shape, target_coords.shape, target_rgbs.shape, cells.shape)
+        # exit()
         num_t, _ = target_ts.shape
 
         cur_psnr = 0.
         with torch.no_grad():
-            feat = model.get_feat(input_frames)
-            for t, f in zip(target_ts, target_frames):
-                pred_frame = model.get_rgb(feat, t)
+            feat = torch.unsqueeze(model.get_feat(input_frames), 0)
+            for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
+                pred_frame = model.get_rgb(feat, coord, cell, t)
+                print(pred_frame.shape)
+                exit()
                 cur_psnr += psnr(f, pred_frame)
                 save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
@@ -72,7 +79,23 @@ def train(opt, model, train_dataloader, val_dataloader):
             writer.add_scalar('recon', loss.item(), epoch * steps_per_epoch + step)
             if step % opt.viz_step == 0:
                 print(loss.item())
-                save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{t[0]:04f}.png')
+                viz_pred = pred_frame[0].contiguous().view(opt.patch_size, opt.patch_size, 3).permute(2, 0, 1)
+                save_rgbtensor(viz_pred, f'{opt.exp_dir}/imgs/{epoch}_{step}_pred.png')
+                save_rgbtensor(target_frame[0], f'{opt.exp_dir}/imgs/{epoch}_{step}_gt_{t[0].item():04f}.png')
+
+                viz_input = inp_frames[0].permute(1, 0, 2, 3)
+                viz_input = (viz_input + 1.) / 2.
+                for idx, img in enumerate(viz_input):
+                    save_rgbtensor(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+            break
+
+        # Validate - save best model
+        val_psnr = validate(opt, device, model, val_dataloader, epoch)
+        writer.add_scalar('val_psnr', val_psnr, epoch)
+        if val_psnr > best_psnr:
+            torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
+                       f'{opt.exp_dir}/ckpt/best.pth')
+            best_psnr = val_psnr
 
         # Log lr
         writer.add_scalar('train/learning_rate', scheduler.get_last_lr()[0], epoch)

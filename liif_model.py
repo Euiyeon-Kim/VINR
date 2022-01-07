@@ -104,6 +104,7 @@ class LIIF(nn.Module):
     def forward(self, x, query_coord, cell):
         # x(feature): (B, z_dim, H, W)
         # coord: (B, sample, 2)
+        print("!?", x.shape, query_coord.shape, cell.shape)
         B, z_dim, H, W = x.shape
 
         # 주변 3*3 feature concat

@@ -24,4 +24,4 @@ class Config:
         self.flow_lambda = 1.
 
         # LIIF
-        self.sample_q = None
+        self.sample_q = 96*96*3
