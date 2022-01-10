@@ -63,8 +63,10 @@ class XVFIEncoder(nn.Module):
             nn.Conv2d(2 * nf, nf, (3, 3), (1, 1), (1, 1)),
         )
 
-    def forward(self, x):
+    def forward(self, x, is_val=False):
         feat_x = self.rec_ext_ds_module(x)
+        if is_val:
+            feat_x = torch.unsqueeze(feat_x, 0)
         feat_x = self.conv_last(feat_x)
         return feat_x
 
@@ -218,12 +220,12 @@ class VINR(nn.Module):
 
     # Normalize?
     def forward(self, frames, query_coord, cell, t):
-        feat = self.get_feat(frames)
+        feat = self.encoder(frames)
         pred = self.get_rgb(feat, query_coord, cell, t)
         return pred
 
-    def get_feat(self, frames):
-        z = self.encoder(frames)
+    def get_feat(self, frames):     # can only be called by validation or test
+        z = self.encoder(frames, is_val=True)
         return z
 
     def get_rgb(self, feat, query_coord, cell, t):
