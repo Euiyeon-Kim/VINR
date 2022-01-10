@@ -116,3 +116,4 @@ class SirenLayer(nn.Module):
     def forward(self, x):
         x = self.linear(x)
         return x if self.is_last else torch.sin(self.w0 * x)
+

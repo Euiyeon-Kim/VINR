@@ -5,7 +5,7 @@ from torch import nn
 from torch.optim import Adam, lr_scheduler
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
-from trainer import save_rgbtensor, psnr
+from resourse.mod.mod_trainer import save_rgbtensor, psnr
 
 
 def warp_loss(warped, target):
@@ -40,10 +40,6 @@ def validate(opt, device, model, val_dataloader, epoch):
 
 def train(opt, model, train_dataloader, val_dataloader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    os.makedirs(f'{opt.exp_dir}/logs', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/imgs', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/val', exist_ok=True)
     os.makedirs(f'{opt.exp_dir}/flow', exist_ok=True)
 
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
@@ -55,7 +51,6 @@ def train(opt, model, train_dataloader, val_dataloader):
 
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.T_max, eta_min=opt.min_lr)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.2, patience=5, min_lr=opt.min_lr)
 
     for epoch in range(opt.epochs):

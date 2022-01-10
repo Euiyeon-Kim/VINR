@@ -5,7 +5,7 @@ from torch import nn
 from torch.optim import Adam, lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer import save_rgbtensor, psnr
+from resourse.mod.mod_trainer import save_rgbtensor, psnr
 
 
 def validate(opt, device, model, val_dataloader, epoch):
@@ -16,24 +16,22 @@ def validate(opt, device, model, val_dataloader, epoch):
 
         os.makedirs(f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
         input_frames = input_frames.to(device)
-        target_ts = target_ts.transpose(1, 0).float().to(device)
+        target_ts = torch.unsqueeze(target_ts.transpose(1, 0).float(), -1).to(device)
         target_coords = target_coords.to(device).permute(1, 0, 2, 3)
         target_rgbs = target_rgbs.to(device).permute(1, 0, 2, 3)
         cells = cells.to(device).permute(1, 0, 2, 3)
-
-        # print(target_ts.shape, target_coords.shape, target_rgbs.shape, cells.shape)
-        # exit()
-        num_t, _ = target_ts.shape
+        num_t, _, _ = target_ts.shape
 
         cur_psnr = 0.
         with torch.no_grad():
             feat = torch.unsqueeze(model.get_feat(input_frames), 0)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
                 pred_frame = model.get_rgb(feat, coord, cell, t)
-                print(pred_frame.shape)
-                exit()
-                cur_psnr += psnr(f, pred_frame)
-                save_rgbtensor(pred_frame[0], f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
+                pred_frame = pred_frame.contiguous().view(512, 512, 3)
+                rgb = rgb.contiguous().view(512, 512, 3)
+                cur_psnr += psnr(rgb, pred_frame)
+                viz_pred = pred_frame.permute(2, 0, 1)
+                save_rgbtensor(viz_pred, f'{opt.exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
         total_psnr = total_psnr + (cur_psnr / num_t)
 
@@ -51,12 +49,14 @@ def train(opt, model, train_dataloader, val_dataloader):
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
     model = model.to(device)
-
     steps_per_epoch = len(train_dataloader)
+
+    best_psnr = 0
 
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=opt.min_lr)
+    # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=opt.min_lr)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,'max',factor=0.2, patience=10, min_lr=opt.min_lr)
 
     for epoch in range(opt.epochs):
         model.train()
@@ -87,7 +87,6 @@ def train(opt, model, train_dataloader, val_dataloader):
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
                     save_rgbtensor(img, f'{opt.exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
-            break
 
         # Validate - save best model
         val_psnr = validate(opt, device, model, val_dataloader, epoch)
@@ -98,14 +97,11 @@ def train(opt, model, train_dataloader, val_dataloader):
             best_psnr = val_psnr
 
         # Log lr
-        writer.add_scalar('train/learning_rate', scheduler.get_last_lr()[0], epoch)
-        scheduler.step()
+        # writer.add_scalar('train/learning_rate', scheduler.get_last_lr()[0], epoch)
+        writer.add_scalar('train/learning_rate', optimizer.param_groups[0]['lr'], epoch)
+        scheduler.step(val_psnr)
 
         # Save best psnr model
         if (epoch + 1) % opt.save_epoch == 0:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                        f'{opt.exp_dir}/ckpt/{epoch+1}.pth')
-
-
-
-

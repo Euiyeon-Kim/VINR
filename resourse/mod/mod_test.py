@@ -1,5 +1,4 @@
 import os
-import argparse
 from glob import glob
 from natsort import natsorted
 
@@ -8,8 +7,9 @@ from PIL import Image
 import torch
 from torch import nn
 
-from liif_model import XVFIEncoder, LIIF, ModRGBMapper, VINR
-from trainer import save_rgbtensor
+from models.common import Encoder
+from models.mod import Modulator, ModRGBMapper, VINR
+from mod_trainer import save_rgbtensor
 
 
 if __name__ == '__main__':
@@ -17,12 +17,11 @@ if __name__ == '__main__':
     opt = Config()
     os.makedirs(f'{opt.exp_dir}/infer', exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    encoder = XVFIEncoder(in_c=3, num_frames=opt.num_frames, nf=opt.z_dim, n_blocks=2)
-    liif = LIIF(opt.z_dim)
-    mapper = ModRGBMapper(out_dim=3)
-    model = VINR(encoder, liif, mapper)
-    model = nn.DataParallel(model)
+    encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
+    modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
+    mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
+    model = VINR(encoder, modulator, mapper)
+    model = nn.DataParallel(model).to(device)
 
     ckpt = torch.load(f'{opt.exp_dir}/ckpt/best.pth')
     model.load_state_dict(ckpt['model'], strict=False)

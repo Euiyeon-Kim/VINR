@@ -1,14 +1,11 @@
 import os
 import shutil
 
-from torch import nn
-
 from config import Config
-from flow_trainer import train
+from mod_trainer import train
 from dataloader import get_dataloader
-from common_model import Encoder
-from mod_model import Modulator
-from mod_flow_model import ModMapper, VINR
+from models.common import Encoder
+from models.mod import Modulator, ModRGBMapper, VINR, VINRDataParallel
 
 
 if __name__ == '__main__':
@@ -19,12 +16,11 @@ if __name__ == '__main__':
 
     encoder = Encoder(in_dim=3*opt.num_frames, out_dim=opt.z_dim)
     modulator = Modulator(in_f=opt.z_dim, hidden_node=256, depth=4)
-    mod_generator = ModMapper(out_dim=opt.num_frames*3, hidden_node=256, depth=5)
+    mapper = ModRGBMapper(out_dim=3, hidden_node=256, depth=5)
 
-    import torch
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = VINR(encoder, modulator, mod_generator, device, opt.num_frames)
-    model = nn.DataParallel(model)
+    model = VINR(encoder, modulator, mapper)
+    # model = nn.DataParallel(model)
+    model = VINRDataParallel(model)
 
     train_dataloader, val_dataloader = get_dataloader(opt)
 

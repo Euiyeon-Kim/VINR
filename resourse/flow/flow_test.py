@@ -1,5 +1,4 @@
 import os
-import argparse
 from glob import glob
 from natsort import natsorted
 
@@ -7,12 +6,11 @@ import numpy as np
 from PIL import Image
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
 
-from common_model import Encoder
-from mod_model import Modulator
-from mod_flow_model import ModMapper, VINR
-from trainer import save_rgbtensor
+from models.common import Encoder
+from models.mod import Modulator
+from models.flow import ModMapper, VINR
+from resourse.mod.mod_trainer import save_rgbtensor
 
 
 if __name__ == '__main__':

@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from common_model import LFF, SirenLayer
+from models import register
+from models.common import LFF, SirenLayer
 
 
 class ResBlock3D(nn.Module):
@@ -104,7 +105,6 @@ class LIIF(nn.Module):
     def forward(self, x, query_coord, cell):
         # x(feature): (B, z_dim, H, W)
         # coord: (B, sample, 2)
-        print("!?", x.shape, query_coord.shape, cell.shape)
         B, z_dim, H, W = x.shape
 
         # 주변 3*3 feature concat
@@ -202,13 +202,10 @@ class VINR(nn.Module):
         self.liif = liif
         self.mapper = mapper
 
-    # Normalizing?
+    # Normalize?
     def forward(self, frames, query_coord, cell, t):
         feat = self.get_feat(frames)
         pred = self.get_rgb(feat, query_coord, cell, t)
-        # z = self.encoder(frames)
-        # mod_params = self.liif(z, query_coord, cell)
-        # pred = self.mapper(t, mod_params)
         return pred
 
     def get_feat(self, frames):
@@ -219,6 +216,12 @@ class VINR(nn.Module):
         mod_params = self.liif(feat, query_coord, cell)
         pred = self.mapper(t, mod_params)
         return pred
+
+
+@register('liif')
+def make_liif(opt):
+    print(opt)
+    exit()
 
 
 if __name__ == '__main__':

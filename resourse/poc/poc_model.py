@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from common_model import SirenLayer
+from models.common import SirenLayer
 
 
 class Reflector(nn.Module):
@@ -39,7 +39,7 @@ class VINR(nn.Module):
 if __name__ == '__main__':
     from config import Config
     opt = Config()
-    from common_model import Encoder
+    from models.common import Encoder
     encoder = Encoder(in_dim=3 * opt.num_frames, out_dim=opt.z_dim)
     mapper = Reflector(in_dim=1, out_dim=3, z_dim=opt.z_dim)
     model = VINR(encoder, mapper)

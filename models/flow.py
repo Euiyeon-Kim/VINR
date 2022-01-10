@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from common_model import LFF, SirenLayer
+from models.common import LFF, SirenLayer
 
 
 class ModMapper(nn.Module):
@@ -83,8 +83,8 @@ if __name__ == '__main__':
     z_dim = 50
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    from common_model import Encoder
-    from mod_model import Modulator
+    from models.common import Encoder
+    from models.mod import Modulator
     encoder = Encoder(in_dim=3*num_frame, out_dim=z_dim)
     modulator = Modulator(z_dim, 256, 4)
     mod_generator = ModMapper(out_dim=num_frame*3)

@@ -3,13 +3,11 @@ import shutil
 
 import torch.cuda
 from torch import nn
-from torch.optim import Adam
-from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from dataloader import get_dataloader
-from common_model import Encoder
+from models.common import Encoder
 from poc_model import Reflector, VINR
 
 
@@ -89,7 +87,7 @@ if __name__ == '__main__':
 
     train_dataloader, val_dataloader = get_dataloader(opt)
 
-    from trainer import train
+    from resourse.mod.mod_trainer import train
     train(opt, model, train_dataloader, val_dataloader)
 
     # train(config)

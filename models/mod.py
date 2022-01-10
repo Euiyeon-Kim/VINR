@@ -1,6 +1,8 @@
 import torch
 from torch import nn
-from common_model import LFF, SirenLayer
+
+from models import register
+from models.common import LFF, SirenLayer, Encoder
 
 
 class Modulator(nn.Module):
@@ -44,7 +46,7 @@ class ModRGBMapper(nn.Module):
 
     def forward(self, t, mod_params):
         b, h, w, hidden = mod_params[0].shape
-        x = self.lff(t).unsqueeze(1).unsqueeze(1).repeat(1, h, w, 1)
+        x = self.lff(t).unsqueeze(1).repeat(1, h, w, 1)
         for layer, mod in zip(self.layers, mod_params):
             x = layer(x)
             x *= mod
@@ -86,11 +88,20 @@ class VINRDataParallel(nn.DataParallel):
             return getattr(self.module, name)
 
 
+@register('mod')
+def make_mod_vinr(common_opt, specified_opt):
+    encoder = Encoder(in_dim=3*common_opt.num_frames, out_dim=common_opt.z_dim)
+    modulator = Modulator(common_opt.z_dim, specified_opt.hidden, specified_opt.depth-1)
+    mapper = ModRGBMapper(out_dim=3, w0=specified_opt.w0, hidden_node=specified_opt.hidden, depth=specified_opt.depth)
+    vinr = VINR(encoder, modulator, mapper)
+    model = VINRDataParallel(vinr)
+    return model
+
+
 if __name__ == '__main__':
     num_frame = 5
     z_dim = 50
 
-    from common_model import Encoder
     encoder = Encoder(in_dim=3*num_frame, out_dim=z_dim)
     z = encoder(torch.randn((4, 3, 5, 32, 32)))
 
