@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from models import register
-from models.common import LFF, SirenLayer
+from models.common import LFF, SirenLayer, VINRDataParallel
 
 
 class ResBlock3D(nn.Module):
@@ -219,9 +219,15 @@ class VINR(nn.Module):
 
 
 @register('liif')
-def make_liif(opt):
-    print(opt)
-    exit()
+def make_liif(common_opt, specified_opt):
+    encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, nf=common_opt.z_dim,
+                          n_blocks=specified_opt.encoder_blocks)
+    liif = LIIF(z_dim=common_opt.z_dim, hidden_node=specified_opt.hidden, depth=specified_opt.depth-1)
+    mapper = ModRGBMapper(out_dim=3, w0=specified_opt.w0,
+                          hidden_node=specified_opt.hidden, depth=specified_opt.depth)
+    vinr = VINR(encoder, liif, mapper)
+    model = VINRDataParallel(vinr)
+    return model
 
 
 if __name__ == '__main__':

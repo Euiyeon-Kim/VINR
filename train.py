@@ -1,8 +1,6 @@
 import os
 import shutil
 
-import torch
-
 from config import config
 from build_pipeline import prepare_train
 

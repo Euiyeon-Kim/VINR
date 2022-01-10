@@ -2,8 +2,8 @@ from dotmap import DotMap
 
 config = DotMap(
     {
-        'exp_name': 'mod_rgb_debug',
-        'model_type': 'mod',    # ['mod', 'liif', 'xvfi']
+        'exp_name': 'liif_rgb_debug',
+        'model_type': 'liif',    # ['mod', 'liif', 'xvfi']
         'output_type': 'rgb',   # ['rgb', 'flow']
 
         'common': {
@@ -34,7 +34,11 @@ config = DotMap(
         },
 
         'liif': {
-
+            'encoder_blocks': 2,
+            'sample_q': None,
+            'hidden': 256,
+            'depth': 5,
+            'w0': 200
         },
 
         'xvfi': {

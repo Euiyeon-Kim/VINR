@@ -42,20 +42,14 @@ def validate(opt, device, model, val_dataloader, epoch):
 
 def train(opt, model, train_dataloader, val_dataloader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    os.makedirs(f'{opt.exp_dir}/logs', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/imgs', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/ckpt', exist_ok=True)
-    os.makedirs(f'{opt.exp_dir}/val', exist_ok=True)
     writer = SummaryWriter(f'{opt.exp_dir}/logs')
 
     model = model.to(device)
     steps_per_epoch = len(train_dataloader)
 
-    best_psnr = 0
-
+    best_psnr = 0.
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    # scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=opt.min_lr)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,'max',factor=0.2, patience=10, min_lr=opt.min_lr)
 
     for epoch in range(opt.epochs):
@@ -97,7 +91,6 @@ def train(opt, model, train_dataloader, val_dataloader):
             best_psnr = val_psnr
 
         # Log lr
-        # writer.add_scalar('train/learning_rate', scheduler.get_last_lr()[0], epoch)
         writer.add_scalar('train/learning_rate', optimizer.param_groups[0]['lr'], epoch)
         scheduler.step(val_psnr)
 

@@ -65,6 +65,13 @@ class X4K1000FPS(Dataset):
         frames = np.stack(frames, axis=0)
 
         target_ts = target_idxs / 32.
+        target_ts = torch.Tensor(target_ts).float()
+
+        # Patchify
+        _, h, w, c = frames.shape
+        ix = random.randrange(0, w - self.patch_size + 1)
+        iy = random.randrange(0, h - self.patch_size + 1)
+        frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
 
         frames = frames.transpose((0, 3, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float))

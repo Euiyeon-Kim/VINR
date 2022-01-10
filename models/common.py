@@ -117,3 +117,10 @@ class SirenLayer(nn.Module):
         x = self.linear(x)
         return x if self.is_last else torch.sin(self.w0 * x)
 
+
+class VINRDataParallel(nn.DataParallel):
+    def __getattr__(self, name):
+        if name == 'module':
+            return self._modules['module']
+        else:
+            return getattr(self.module, name)

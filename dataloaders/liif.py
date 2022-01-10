@@ -12,10 +12,10 @@ from dataloaders import register
 
 
 class X4KLIIF(Dataset):
-    def __init__(self, opt, root, is_train=True):
+    def __init__(self, opt, sample_q, root, is_train=True):
         super(X4KLIIF, self).__init__()
         self.opt = opt
-        self.sample_q = opt.sample_q
+        self.sample_q = sample_q
         self.num_frames = opt.num_frames
         self.patch_size = opt.patch_size
         self.clips = glob(f'{root}/*/*')
@@ -149,16 +149,20 @@ class X4KLIIF(Dataset):
 
         frames, target_t = self.augment(origin_frames, origin_target_frame, target_t)
         target_coord, target_rgb, cell = self.make_liif_data(frames[-1, :, :, :])
+        target_t = torch.Tensor([target_t]).float()
 
         frames = self.norm_and_to_tensor(frames)
-        return frames[:, :-1, :, :], frames[:, -1, :, :], target_t, target_coord, target_rgb, cell
+        return {
+            'inp_frames': frames[:, :-1, :, :],
+            'target_t': target_t,
+            'target_coord': target_coord,
+            'target_rgb': target_rgb,
+            'cell': cell
+        }
 
 
 @register('liif')
-def make_mod_dataloader(common_opt):
-    train_dataset = X4KLIIF(common_opt, f'{common_opt.data_root}/train', True)
-    val_dataset = X4KLIIF(common_opt, f'{common_opt.data_root}/val', False)
-    # train_dataloader = DataLoader(train_dataset, batch_size=common_opt.batch_size, shuffle=True,
-    #                                   drop_last=False, num_workers=common_opt.num_workers)
-    # val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=1)
+def make_mod_dataloader(common_opt, specified_opt):
+    train_dataset = X4KLIIF(common_opt, specified_opt.sample_q, f'{common_opt.data_root}/train', True)
+    val_dataset = X4KLIIF(common_opt, specified_opt.sample_q, f'{common_opt.data_root}/val', False)
     return train_dataset, val_dataset

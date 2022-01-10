@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from models import register
-from models.common import LFF, SirenLayer, Encoder
+from models.common import LFF, SirenLayer, Encoder, VINRDataParallel
 
 
 class Modulator(nn.Module):
@@ -79,13 +79,6 @@ class VINR(nn.Module):
         rgb = self.mapper(t.unsqueeze(-1), mod_params).permute(0, 3, 1, 2)
         return rgb
 
-
-class VINRDataParallel(nn.DataParallel):
-    def __getattr__(self, name):
-        if name == 'module':
-            return self._modules['module']
-        else:
-            return getattr(self.module, name)
 
 
 @register('mod')

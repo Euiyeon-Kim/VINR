@@ -19,7 +19,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
 
         input_frames = input_frames.to(device)
         target_frames = torch.unsqueeze(torch.squeeze(target_frames), 1).to(device)
-        target_ts = target_ts.transpose(1, 0).float().to(device)
+        target_ts = target_ts.transpose(1, 0).to(device)
         num_t, _ = target_ts.shape
 
         cur_psnr = 0.
@@ -76,7 +76,6 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_input):
                     save_rgbtensor(img, f'{exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
 
-            break
         # Validate - save best model
         val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)
         writer.add_scalar('val_psnr', val_psnr, epoch)
