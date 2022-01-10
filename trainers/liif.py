@@ -89,7 +89,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
         writer.add_scalar('val_psnr', val_psnr, epoch)
         if val_psnr > best_psnr:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
-                       f'{opt.exp_dir}/ckpt/best.pth')
+                       f'{exp_dir}/ckpt/best.pth')
             best_psnr = val_psnr
 
         # Log lr
@@ -99,7 +99,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
         # Save best psnr model
         if (epoch + 1) % opt.save_epoch == 0:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
-                       f'{opt.exp_dir}/ckpt/{epoch+1}.pth')
+                       f'{exp_dir}/ckpt/{epoch+1}.pth')
 
 
 @register('liif')
