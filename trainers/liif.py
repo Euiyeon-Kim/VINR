@@ -25,7 +25,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
 
         cur_psnr = 0.
         with torch.no_grad():
-            feat = torch.unsqueeze(model.get_feat(input_frames), 0)
+            feat = model.get_feat(input_frames)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
                 pred_frame = model.get_rgb(feat, coord, cell, t)
                 pred_frame = pred_frame.contiguous().view(512, 512, 3)
