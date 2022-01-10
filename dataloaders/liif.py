@@ -12,10 +12,11 @@ from dataloaders import register
 
 
 class X4KLIIF(Dataset):
-    def __init__(self, opt, sample_q, root, is_train=True):
+    def __init__(self, opt, sample_q, multiscale, root, is_train=True):
         super(X4KLIIF, self).__init__()
         self.opt = opt
         self.sample_q = sample_q
+        self.multiscale = multiscale
         self.num_frames = opt.num_frames
         self.patch_size = opt.patch_size
         self.clips = glob(f'{root}/*/*')
@@ -34,10 +35,11 @@ class X4KLIIF(Dataset):
         frames = np.stack(frames + [target_frame], axis=0)
 
         # Patchify
-        h, w, c = target_frame.shape
-        ix = random.randrange(0, w - self.patch_size + 1)
-        iy = random.randrange(0, h - self.patch_size + 1)
-        frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+        if not self.multiscale:
+            h, w, c = target_frame.shape
+            ix = random.randrange(0, w - self.patch_size + 1)
+            iy = random.randrange(0, h - self.patch_size + 1)
+            frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
 
         # Flip
         if random.random() < 0.5:
@@ -147,6 +149,18 @@ class X4KLIIF(Dataset):
         origin_target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
         target_t = (target_idx - first_frame_idx) / (last_frame_idx - first_frame_idx)
 
+        if self.multiscale:
+            h, w, _ = origin_target_frame.shape
+            crop_size = random.randint(self.patch_size, h)
+            ih = random.randrange(0, h - crop_size + 1)
+            iw = random.randrange(0, w - crop_size + 1)
+
+            origin_frames = [np.array(Image.fromarray(x[ih:ih+crop_size, iw:iw+crop_size, :])
+                                      .resize((self.patch_size, self.patch_size), Image.BICUBIC))
+                             for x in origin_frames]
+            origin_target_frame = np.array(Image.fromarray(origin_target_frame[ih:ih + crop_size, iw:iw + crop_size, :])
+                                           .resize((self.patch_size, self.patch_size), Image.BICUBIC))
+
         frames, target_t = self.augment(origin_frames, origin_target_frame, target_t)
         target_coord, target_rgb, cell = self.make_liif_data(frames[-1, :, :, :])
         target_t = torch.Tensor([target_t]).float()
@@ -163,6 +177,6 @@ class X4KLIIF(Dataset):
 
 @register('liif')
 def make_mod_dataloader(common_opt, specified_opt):
-    train_dataset = X4KLIIF(common_opt, specified_opt.sample_q, f'{common_opt.data_root}/train', True)
-    val_dataset = X4KLIIF(common_opt, specified_opt.sample_q, f'{common_opt.data_root}/val', False)
+    train_dataset = X4KLIIF(common_opt, specified_opt.sample_q, specified_opt.multiscale, f'{common_opt.data_root}/train', True)
+    val_dataset = X4KLIIF(common_opt, specified_opt.sample_q, False, f'{common_opt.data_root}/val', False)
     return train_dataset, val_dataset

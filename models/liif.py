@@ -50,8 +50,22 @@ class XVFIEncoder(nn.Module):
         self.rec_ext_ds_module.append(RResBlock3D(nf, num_frames=num_frames, reduce_f=False))
         self.rec_ext_ds_module = nn.Sequential(*self.rec_ext_ds_module)
 
+        self.nf = nf
+        self.conv_last = nn.Sequential(
+            nn.Conv2d(nf, 2 * nf, (4, 4), (2, 2), (1, 1)),
+            nn.ReLU(),
+            nn.Conv2d(2 * nf, 4 * nf, (4, 4), (2, 2), (1, 1)),
+            nn.ReLU(),
+            nn.UpsamplingNearest2d(scale_factor=2),
+            nn.Conv2d(4 * nf, 2 * nf, (3, 3), (1, 1), (1, 1)),
+            nn.ReLU(),
+            nn.UpsamplingNearest2d(scale_factor=2),
+            nn.Conv2d(2 * nf, nf, (3, 3), (1, 1), (1, 1)),
+        )
+
     def forward(self, x):
         feat_x = self.rec_ext_ds_module(x)
+        feat_x = self.conv_last(feat_x)
         return feat_x
 
 

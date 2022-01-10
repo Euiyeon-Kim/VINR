@@ -36,6 +36,7 @@ config = DotMap(
         'liif': {
             'encoder_blocks': 2,
             'sample_q': None,
+            'multiscale': True,
             'hidden': 256,
             'depth': 5,
             'w0': 200
