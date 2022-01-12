@@ -109,6 +109,13 @@ class X4KLIIF(Dataset):
             target_frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
         target_frames = np.stack(target_frames, axis=0)
 
+        # # TODO
+        # _, h, w, c = target_frames.shape
+        # ix = random.randrange(0, w - self.patch_size + 1)
+        # iy = random.randrange(0, h - self.patch_size + 1)
+        # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+        # target_frames = target_frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+
         target_ts = target_idxs / 32.
         target_coords, target_rgbs, cells = [], [], []
         for target_frame in target_frames:

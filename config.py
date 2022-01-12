@@ -2,7 +2,7 @@ from dotmap import DotMap
 
 config = DotMap(
     {
-        'exp_name': 'liif_flow_debug',
+        'exp_name': 'db',
         'model_type': 'liif_flow',    # ['mod', 'liif', 'xvfi', 'liif_flow']
 
         'common': {
