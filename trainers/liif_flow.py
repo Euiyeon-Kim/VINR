@@ -106,12 +106,13 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
 
         # Validate - save best model
-        val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)
-        writer.add_scalar('val_psnr', val_psnr, epoch)
-        if val_psnr > best_psnr:
-            torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
-                       f'{exp_dir}/ckpt/best.pth')
-            best_psnr = val_psnr
+        if epoch % opt.val_epoch == 0:
+            val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)
+            writer.add_scalar('val_psnr', val_psnr, epoch)
+            if val_psnr > best_psnr:
+                torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
+                           f'{exp_dir}/ckpt/best.pth')
+                best_psnr = val_psnr
 
         # Log lr
         writer.add_scalar('train/learning_rate', optimizer.param_groups[0]['lr'], epoch)
