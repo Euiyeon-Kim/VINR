@@ -124,7 +124,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                        f'{exp_dir}/ckpt/{epoch+1}.pth')
 
 
-@register('liif_flow')
+@register('liif_flow_v2')
 def make_train_f(common_opt, exp_name):
     train_f = partial(train, common_opt, f'exps/{exp_name}')
     return train_f

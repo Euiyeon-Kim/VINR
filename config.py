@@ -3,7 +3,7 @@ from dotmap import DotMap
 config = DotMap(
     {
         'exp_name': 'db',
-        'model_type': 'liif_flow',    # ['mod', 'liif', 'xvfi', 'liif_flow']
+        'model_type': 'liif_flow_v2',    # ['mod', 'liif', 'xvfi', 'liif_flow', 'liif_flow_v2']
 
         'common': {
             'data_root': 'x4k',
@@ -35,7 +35,7 @@ config = DotMap(
         'liif': {
             'encoder_blocks': 2,
             'sample_q': None,
-            'multiscale': True,
+            'multiscale': False,
             'hidden': 256,
             'depth': 5,
             'w0': 200
@@ -43,43 +43,16 @@ config = DotMap(
 
         'liif_flow': {
             'encoder_blocks': 2,
-            'sample_q': None,
-            'multiscale': False,
+            'hidden': 256,
+            'depth': 5,
+            'w0': 200
+        },
+
+        'liif_flow_v2': {
+            'encoder_blocks': 2,
             'hidden': 256,
             'depth': 5,
             'w0': 200
         },
     }
 )
-
-# class Config:
-#     def __init__(self):
-#         self.exp_name = 'modrgb_debug'
-#         self.model_type = 'mod'                 # ['mod', 'liif', 'xvfi']
-#         self.output_type = 'rgb'                # ['rgb', 'flow']
-#         self.exp_dir = f'exps/{self.exp_name}'
-#
-#         self.z_dim = 64
-#         self.num_frames = 5
-#
-#         # Dataset
-#         self.data_root = 'x4k'
-#         self.patch_size = 96
-#         self.num_workers = 8
-#
-#         # Train setting
-#         self.epochs = 1000
-#         self.viz_step = 500
-#         self.val_epoch = 5
-#         self.save_epoch = 20
-#
-#         # Hyper params
-#         self.batch_size = 2
-#         self.lr = 1e-4
-#         self.min_lr = 1e-6
-#
-#         # Flow
-#         self.flow_lambda = 1.
-#
-#         # LIIF
-#         self.sample_q = None

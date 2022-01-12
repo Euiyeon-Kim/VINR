@@ -1,2 +1,2 @@
 from .trainers import register, make
-from . import liif, mod, liif_flow
+from . import mod, liif, liif_flow, liif_flow_v2
