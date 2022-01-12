@@ -6,8 +6,8 @@ from build_pipeline import prepare_train
 
 if __name__ == '__main__':
     opt = config
-    assert opt.model_type in ['mod', 'liif', 'xvfi'], "model should be one of ['mod', 'liif', 'xvfi']"
-    assert opt.output_type in ['rgb', 'flow'], "output_type should be one of ['rgb', 'flow']"
+    assert opt.model_type in ['mod', 'liif', 'xvfi', 'liif_flow'], \
+        "model should be one of ['mod', 'liif', 'xvfi', 'liif_flow']"
 
     os.makedirs(f'exps/{opt.exp_name}/logs', exist_ok=True)
     os.makedirs(f'exps/{opt.exp_name}/imgs', exist_ok=True)
