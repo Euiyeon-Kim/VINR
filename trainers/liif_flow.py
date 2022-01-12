@@ -34,10 +34,9 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
             feat = model.get_feat(input_frames)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, t)
-                rgb = rgb.contiguous().view(-1, 512, 512, 3)
+                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
-                viz_pred = pred_frame[0].permute(2, 0, 1)
-                save_rgbtensor(viz_pred, f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
+                save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
         total_psnr = total_psnr + (cur_psnr / num_t)
 
