@@ -75,7 +75,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
 
             recon_loss = loss_fn(pred_frame, target_frame)
             flow_loss = warp_loss(warped, target_frame)
-            loss = flow_loss + recon_loss
+            loss = flow_loss * 0.1 + recon_loss
 
             optimizer.zero_grad()
             loss.backward()
