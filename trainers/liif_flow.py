@@ -16,12 +16,13 @@ def warp_loss(warped, target):
     return torch.nn.L1Loss()(gt, warped)
 
 
-def validate(exp_dir, device, model, val_dataloader, epoch):
+def validate(exp_dir, device, model, val_dataloader, epoch, viz):
     model.eval()
     total_psnr = 0.
     for data in val_dataloader:
         input_frames, target_ts, target_coords, target_rgbs, cells, clip_name = data
-        os.makedirs(f'{exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
+        if viz:
+            os.makedirs(f'{exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
         input_frames = input_frames.to(device)
         target_ts = torch.unsqueeze(target_ts.transpose(1, 0).float(), -1).to(device)
         target_coords = target_coords.to(device).permute(1, 0, 2, 3)
@@ -36,7 +37,8 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, t)
                 rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
-                save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
+                if viz:
+                    save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
         total_psnr = total_psnr + (cur_psnr / num_t)
 
@@ -103,9 +105,12 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_mask):
                     save_rgbtensor(torch.unsqueeze(img, 0),
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
+            break
 
         # Validate - save best model
-        val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)
+        viz = True if (epoch + 1) % opt.val_save_epoch == 0 else False
+        val_psnr = validate(exp_dir, device, model, val_dataloader, epoch, viz)
+
         writer.add_scalar('val_psnr', val_psnr, epoch)
         if val_psnr > best_psnr:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
