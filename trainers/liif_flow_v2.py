@@ -20,9 +20,10 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
     model.eval()
     total_psnr = 0.
     for data in val_dataloader:
-        input_frames, target_ts, target_coords, target_rgbs, cells, clip_name = data
+        input_frames, selected_ts, target_ts, target_coords, target_rgbs, cells, clip_name = data
         os.makedirs(f'{exp_dir}/val/{epoch}/{clip_name[0]}', exist_ok=True)
         input_frames = input_frames.to(device)
+        selected_ts = selected_ts.to(device)
         target_ts = torch.unsqueeze(target_ts.transpose(1, 0).float(), -1).to(device)
         target_coords = target_coords.to(device).permute(1, 0, 2, 3)
         target_rgbs = target_rgbs.to(device).permute(1, 0, 2, 3)
@@ -33,8 +34,8 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
         with torch.no_grad():
             feat = model.get_feat(input_frames)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
-                pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, t)
-                rgb = rgb.contiguous().view(-1, 96, 96, 3).permute(0, 3, 1, 2)
+                pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, selected_ts, t)
+                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
@@ -66,10 +67,10 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
             for k, v in data.items():
                 data[k] = v.to(device)
 
-            inp_frames, target_t, target_coord, target_rgb, cell = \
-                data['inp_frames'], data['target_t'], data['target_coord'], data['target_rgb'], data['cell']
+            inp_frames, selected_ts, target_t, target_coord, target_rgb, cell = \
+                data['inp_frames'], data['selected_ts'], data['target_t'], data['target_coord'], data['target_rgb'], data['cell']
 
-            pred_frame, warped, visibilities = model(inp_frames, target_coord, cell, target_t)
+            pred_frame, warped, visibilities = model(inp_frames, target_coord, cell, selected_ts, target_t)
             target_frame = data['target_rgb'].contiguous().view(-1, opt.patch_size, opt.patch_size, 3).permute(0, 3, 1, 2)
 
             recon_loss = loss_fn(pred_frame, target_frame)
@@ -103,8 +104,6 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_mask):
                     save_rgbtensor(torch.unsqueeze(img, 0),
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
-
-            break
 
         # Validate - save best model
         val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)

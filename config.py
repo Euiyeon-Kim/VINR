@@ -3,7 +3,8 @@ from dotmap import DotMap
 config = DotMap(
     {
         'exp_name': 'db',
-        'model_type': 'liif_flow_v2',    # ['mod', 'liif', 'xvfi', 'liif_flow', 'liif_flow_v2']
+        'model_type': 'liif_flow_v2',       # ['mod', 'liif', 'liif_flow', 'liif_flow_v2']
+        'data_type': 'liif_zero_centered',  # ['mod', 'liif', 'liif_zero_centered']
 
         'common': {
             'data_root': 'x4k',

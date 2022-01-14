@@ -83,6 +83,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 viz_input = (viz_input + 1.) / 2.
                 for idx, img in enumerate(viz_input):
                     save_rgbtensor(img, f'{exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+            break
 
         # Validate - save best model
         val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)

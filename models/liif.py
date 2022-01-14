@@ -14,24 +14,21 @@ class ResBlock3D(nn.Module):
         self.lrelu = nn.ReLU()
 
     def forward(self, x):
-        B, C, F, H, W = x.size()
         out = self.conv3x3_2(self.lrelu(self.conv3x3_1(x)))
         return x + out
 
 
 class RResBlock3D(nn.Module):
-    def __init__(self, nf, num_frames, reduce_f=False):
+    def __init__(self, nf):
         super(RResBlock3D, self).__init__()
         self.nf = nf
-        self.reduce_f = reduce_f
         self.resblock1 = ResBlock3D(nf)
         self.resblock2 = ResBlock3D(nf)
-        self.reduceT_conv = nn.Conv3d(nf, nf, (num_frames, 1, 1), (1, 1, 1), (0, 0, 0))
 
     def forward(self, x):
         out = self.resblock1(x)
         out = self.resblock2(out)
-        return torch.squeeze(self.reduceT_conv(out + x))
+        return out + x
 
 
 class XVFIEncoder(nn.Module):
@@ -47,8 +44,9 @@ class XVFIEncoder(nn.Module):
             self.rec_ext_ds_module.append(self.rec_ext_ds)
             self.rec_ext_ds_module.append(nn.ReLU())
         self.rec_ext_ds_module.append(nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)))
-        self.rec_ext_ds_module.append(RResBlock3D(nf, num_frames=num_frames, reduce_f=False))
+        self.rec_ext_ds_module.append(RResBlock3D(nf))
         self.rec_ext_ds_module = nn.Sequential(*self.rec_ext_ds_module)
+        self.reduceT_conv = nn.Conv3d(nf, nf, (num_frames, 1, 1), (1, 1, 1), (0, 0, 0))
 
         self.nf = nf
         self.conv_last = nn.Sequential(
@@ -63,11 +61,13 @@ class XVFIEncoder(nn.Module):
             nn.Conv2d(2 * nf, nf, (3, 3), (1, 1), (1, 1)),
         )
 
-    def forward(self, x, is_val=False):
+    def forward(self, x):
         feat_x = self.rec_ext_ds_module(x)
-        if is_val:
-            feat_x = torch.unsqueeze(feat_x, 0)
+        B, z_dim, F, H, W = feat_x.shape
+        feat_x = feat_x.permute(0, 2, 1, 3, 4).contiguous().view(B*F, z_dim, H, W)
         feat_x = self.conv_last(feat_x)
+        feat_x = feat_x.view(B, F, z_dim, H, W).permute(0, 2, 1, 3, 4)
+        feat_x = torch.squeeze(self.reduceT_conv(feat_x), 2)
         return feat_x
 
 
@@ -135,8 +135,6 @@ class LIIF(nn.Module):
 
         feat_coord = self.make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
             unsqueeze(0).expand(B, 2, H, W)
-        # feat_coord = self.make_coord(unfold_feat.shape[-2:], flatten=False).permute(2, 0, 1). \
-        #     unsqueeze(0).expand(B, 2, H, W)
 
         preds = []
         areas = []
@@ -187,9 +185,9 @@ class LIIF(nn.Module):
         return ret
 
 
-class ModRGBMapper(nn.Module):
+class ModGenerator(nn.Module):
     def __init__(self, out_dim=3, w0=200, hidden_node=256, depth=5):
-        super(ModRGBMapper, self).__init__()
+        super(ModGenerator, self).__init__()
         self.lff = LFF(1, hidden_node)
         self.depth = depth
 
@@ -220,12 +218,12 @@ class VINR(nn.Module):
 
     # Normalize?
     def forward(self, frames, query_coord, cell, t):
-        feat = self.encoder(frames)
+        feat = self.get_feat(frames)
         pred = self.get_rgb(feat, query_coord, cell, t)
         return pred
 
     def get_feat(self, frames):     # can only be called by validation or test
-        z = self.encoder(frames, is_val=True)
+        z = self.encoder(frames)
         return z
 
     def get_rgb(self, feat, query_coord, cell, t):
@@ -239,7 +237,7 @@ def make_liif(common_opt, specified_opt):
     encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, nf=common_opt.z_dim,
                           n_blocks=specified_opt.encoder_blocks)
     liif = LIIF(z_dim=common_opt.z_dim, hidden_node=specified_opt.hidden, depth=specified_opt.depth-1)
-    mapper = ModRGBMapper(out_dim=3, w0=specified_opt.w0,
+    mapper = ModGenerator(out_dim=3, w0=specified_opt.w0,
                           hidden_node=specified_opt.hidden, depth=specified_opt.depth)
     vinr = VINR(encoder, liif, mapper)
     model = VINRDataParallel(vinr)
@@ -260,7 +258,7 @@ if __name__ == '__main__':
     coord = torch.unsqueeze(coord, 0).repeat(batch_size, 1, 1)
     mod_params = liif(z, coord, cell)
 
-    mapper = ModRGBMapper(out_dim=3)
+    mapper = ModGenerator(out_dim=3)
     rgb = mapper(torch.rand(batch_size, 1), mod_params)
     print(coord.shape, cell.shape)
     model = VINR(encoder, liif, mapper)

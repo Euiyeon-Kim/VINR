@@ -34,7 +34,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch):
             feat = model.get_feat(input_frames)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, t)
-                rgb = rgb.contiguous().view(-1, 96, 96, 3).permute(0, 3, 1, 2)
+                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
 
@@ -103,8 +103,6 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_mask):
                     save_rgbtensor(torch.unsqueeze(img, 0),
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
-
-            break
 
         # Validate - save best model
         val_psnr = validate(exp_dir, device, model, val_dataloader, epoch)
