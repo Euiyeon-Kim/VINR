@@ -16,11 +16,10 @@ config = DotMap(
 
             'epochs': 1500,
             'viz_steps': 500,
-            'val_epoch': 5,
             'save_epoch': 20,
 
             'batch_size': 2,
-            'lr': 2e-4,
+            'lr': 1e-4,
             'factor': 0.5,
             'patience': 10,
             'min_lr': 1e-6,

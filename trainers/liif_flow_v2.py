@@ -73,17 +73,13 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
             pred_frame, warped, visibilities = model(inp_frames, target_coord, cell, selected_ts, target_t)
             target_frame = data['target_rgb'].contiguous().view(-1, opt.patch_size, opt.patch_size, 3).permute(0, 3, 1, 2)
 
-            recon_loss = loss_fn(pred_frame, target_frame)
-            flow_loss = warp_loss(warped, target_frame)
-            loss = flow_loss * 0.1 + recon_loss
+            loss = loss_fn(pred_frame, target_frame)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            writer.add_scalar('train/total', loss.item(), epoch * steps_per_epoch + step)
-            writer.add_scalar('train/recon', recon_loss.item(), epoch * steps_per_epoch + step)
-            writer.add_scalar('train/flow', flow_loss.item(), epoch * steps_per_epoch + step)
+            writer.add_scalar('train/loss', loss.item(), epoch * steps_per_epoch + step)
 
             if step % opt.viz_steps == 0:
                 print(loss.item())
