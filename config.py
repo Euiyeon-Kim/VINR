@@ -3,7 +3,7 @@ from dotmap import DotMap
 config = DotMap(
     {
         'exp_name': 'db',
-        'model_type': 'liif_flow_v2',       # ['mod', 'liif', 'liif_flow', 'liif_flow_v2']
+        'model_type': 'liif_flow_v3',       # ['mod', 'liif', 'liif_flow', 'liif_flow_v2']
         'data_type': 'liif_zero_centered',  # ['mod', 'liif', 'liif_zero_centered']
 
         'common': {
@@ -16,6 +16,7 @@ config = DotMap(
 
             'epochs': 1500,
             'viz_steps': 500,
+            'val_save_epoch': 5,
             'save_epoch': 20,
 
             'batch_size': 2,
@@ -42,13 +43,6 @@ config = DotMap(
         },
 
         'liif_flow': {
-            'encoder_blocks': 2,
-            'hidden': 256,
-            'depth': 5,
-            'w0': 200
-        },
-
-        'liif_flow_v2': {
             'encoder_blocks': 2,
             'hidden': 256,
             'depth': 5,

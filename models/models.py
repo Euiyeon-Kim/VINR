@@ -9,5 +9,6 @@ def register(name):
 
 
 def make(opt):
-    model = models[opt.model_type](opt['common'], opt[opt.model_type])
+    m_type = 'liif_flow' if 'liif_flow' in opt.model_type else opt.model_type
+    model = models[opt.model_type](opt['common'], opt[m_type])
     return model
