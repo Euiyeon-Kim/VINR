@@ -1,6 +1,8 @@
 import os
 from functools import partial
 
+import numpy as np
+
 import torch
 from torch import nn
 from torch.optim import Adam, lr_scheduler
@@ -60,12 +62,11 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
     best_psnr = 0.
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=opt.factor,
-    #                                            patience=opt.patience, min_lr=opt.min_lr)
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150, 180], gamma=0.25)
 
     for epoch in range(opt.epochs):
         model.train()
+        cur_epoch_loss = []
         for step, data in enumerate(train_dataloader):
             for k, v in data.items():
                 data[k] = v.to(device)
@@ -82,10 +83,9 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
             loss.backward()
             optimizer.step()
 
-            writer.add_scalar('train/loss', loss.item(), epoch * steps_per_epoch + step)
+            cur_epoch_loss.append(loss.item())
 
             if step % opt.viz_steps == 0:
-                print(loss.item())
                 save_rgbtensor(pred_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_pred.png')
                 save_rgbtensor(target_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0].item():04f}.png')
 
@@ -103,6 +103,9 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_mask):
                     save_rgbtensor(torch.unsqueeze(img, 0),
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
+
+        print(np.mean(cur_epoch_loss))
+        writer.add_scalar('train/loss', np.mean(cur_epoch_loss), epoch)
 
         # Validate - save best model
         viz = True if (epoch + 1) % opt.val_save_epoch == 0 else False
