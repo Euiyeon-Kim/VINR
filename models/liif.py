@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from models import register
 from models.common import LFF, SirenLayer, VINRDataParallel
-
+from dataloaders.utils import make_coord
 
 class ResBlock3D(nn.Module):
     def __init__(self, nf):
@@ -102,22 +102,6 @@ class LIIF(nn.Module):
         self.in_f = z_dim * 9 + 4      # feature unfold(*9) / coord concat(+2) / cell size concat(+2)
         self.modulator = Modulator(in_f=self.in_f, hidden_node=hidden_node, depth=depth)
 
-    def make_coord(self, shape, ranges=None, flatten=True):
-        # Range를 shape등분 한 grid에서 각 cell의 center 좌표 반환
-        coord_seqs = []
-        for i, n in enumerate(shape):
-            if ranges is None:
-                v0, v1 = -1, 1
-            else:
-                v0, v1 = ranges[i]
-            r = (v1 - v0) / (2 * n)
-            seq = v0 + r + (2 * r) * torch.arange(n).float()
-            coord_seqs.append(seq)
-        ret = torch.stack(torch.meshgrid(*coord_seqs, indexing='ij'), dim=-1)
-        if flatten:
-            ret = ret.view(-1, ret.shape[-1])
-        return ret
-
     def forward(self, x, query_coord, cell):
         # x(feature): (B, z_dim, H, W)
         # coord: (B, sample, 2)
@@ -133,7 +117,7 @@ class LIIF(nn.Module):
         rh = 1 / H
         rw = 1 / W
 
-        feat_coord = self.make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
+        feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
             unsqueeze(0).expand(B, 2, H, W)
 
         preds = []
@@ -254,7 +238,7 @@ if __name__ == '__main__':
 
     cell = torch.randn((batch_size, h*w, 2))
     liif = LIIF(z_dim)
-    coord = liif.make_coord([h, w])
+    coord = make_coord([h, w])
     coord = torch.unsqueeze(coord, 0).repeat(batch_size, 1, 1)
     mod_params = liif(z, coord, cell)
 

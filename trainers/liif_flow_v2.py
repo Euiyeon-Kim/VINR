@@ -36,7 +36,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
             feat = model.get_feat(input_frames)
             for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, selected_ts, t)
-                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
+                rgb = rgb.contiguous().view(-1, 96, 96, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 if viz:
                     save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
@@ -60,8 +60,9 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
     best_psnr = 0.
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=opt.factor,
-                                               patience=opt.patience, min_lr=opt.min_lr)
+    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=opt.factor,
+    #                                            patience=opt.patience, min_lr=opt.min_lr)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150, 180], gamma=0.25)
 
     for epoch in range(opt.epochs):
         model.train()

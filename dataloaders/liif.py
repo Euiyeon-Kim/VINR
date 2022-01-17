@@ -6,9 +6,10 @@ import numpy as np
 from PIL import Image
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 from dataloaders import register
+from dataloaders.utils import make_liif_data
 
 
 class X4KLIIF(Dataset):
@@ -51,43 +52,6 @@ class X4KLIIF(Dataset):
 
         return frames, target_t
 
-    def make_coord(self, shape, ranges=None, flatten=True):
-        coord_seqs = []
-        for i, n in enumerate(shape):
-            if ranges is None:
-                v0, v1 = -1, 1
-            else:
-                v0, v1 = ranges[i]
-            r = (v1 - v0) / (2 * n)
-            seq = v0 + r + (2 * r) * torch.arange(n).float()
-            coord_seqs.append(seq)
-        ret = torch.stack(torch.meshgrid(*coord_seqs, indexing='ij'), dim=-1)
-        if flatten:
-            ret = ret.view(-1, ret.shape[-1])
-        return ret
-
-    def to_pixel_samples(self, img):
-        coord = self.make_coord(img.shape[-2:])
-        rgb = img.view(3, -1).permute(1, 0)
-        return coord, rgb
-
-    def make_liif_data(self, target_frame):
-        # target_frame: H, W, C
-        target_frame = target_frame.transpose((2, 0, 1)) / 127.5 - 1
-        target_frame = torch.Tensor(target_frame.astype(float))
-        target_coord, target_rgb = self.to_pixel_samples(target_frame.contiguous())
-
-        # Sample target hr frame info to make batch
-        if self.sample_q:
-            sample_lst = np.random.choice(len(target_coord), self.sample_q, replace=False)
-            target_coord = target_coord[sample_lst]
-            target_rgb = target_rgb[sample_lst]
-
-        cell = torch.ones_like(target_coord)
-        cell[:, 0] *= 2 / target_frame.shape[-2]
-        cell[:, 1] *= 2 / target_frame.shape[-1]
-        return target_coord, target_rgb, cell
-
     def norm_and_to_tensor(self, img_arr):
         # T, H, W, C -> C, T, H, W
         img_arr = img_arr.transpose((3, 0, 1, 2)) / 127.5 - 1
@@ -119,7 +83,7 @@ class X4KLIIF(Dataset):
         target_ts = target_idxs / 32.
         target_coords, target_rgbs, cells = [], [], []
         for target_frame in target_frames:
-            target_coord, target_rgb, cell = self.make_liif_data(target_frame)
+            target_coord, target_rgb, cell = make_liif_data(target_frame)
             target_coords.append(target_coord)
             target_rgbs.append(target_rgb)
             cells.append(cell)
@@ -169,7 +133,7 @@ class X4KLIIF(Dataset):
                                            .resize((self.patch_size, self.patch_size), Image.BICUBIC))
 
         frames, target_t = self.augment(origin_frames, origin_target_frame, target_t)
-        target_coord, target_rgb, cell = self.make_liif_data(frames[-1, :, :, :])
+        target_coord, target_rgb, cell = make_liif_data(frames[-1, :, :, :])
         target_t = torch.Tensor([target_t]).float()
 
         frames = self.norm_and_to_tensor(frames)

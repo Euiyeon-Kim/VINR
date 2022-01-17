@@ -5,6 +5,7 @@ import numpy as np
 
 
 def make_coord(shape, ranges=None, flatten=True):
+    # Range를 shape등분 한 grid에서 각 cell의 center 좌표 반환
     coord_seqs = []
     for i, n in enumerate(shape):
         if ranges is None:
