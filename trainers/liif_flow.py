@@ -105,7 +105,6 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
                 for idx, img in enumerate(viz_mask):
                     save_rgbtensor(torch.unsqueeze(img, 0),
                                    f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
-            break
 
         # Validate - save best model
         viz = True if (epoch + 1) % opt.val_save_epoch == 0 else False

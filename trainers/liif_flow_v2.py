@@ -34,12 +34,12 @@ def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
         cur_psnr = 0.
         with torch.no_grad():
             feat = model.get_feat(input_frames)
-            for t, rgb, coord, cell in zip(target_ts, target_rgbs, target_coords, cells):
+            for cnt, (t, rgb, coord, cell) in enumerate(zip(target_ts, target_rgbs, target_coords, cells)):
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, selected_ts, t)
-                rgb = rgb.contiguous().view(-1, 96, 96, 3).permute(0, 3, 1, 2)
+                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 if viz:
-                    save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{t.item():.5f}.png')
+                    save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{cnt}.png')
 
         total_psnr = total_psnr + (cur_psnr / num_t)
 
@@ -116,9 +116,9 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
 
         # Log lr
         writer.add_scalar('train/learning_rate', optimizer.param_groups[0]['lr'], epoch)
-        scheduler.step(val_psnr)
+        scheduler.step()
 
-        # Save best psnr model
+        # Save model periodically
         if (epoch + 1) % opt.save_epoch == 0:
             torch.save({'model': model.state_dict(), 'optim': optimizer.state_dict()},
                        f'{exp_dir}/ckpt/{epoch+1}.pth')
