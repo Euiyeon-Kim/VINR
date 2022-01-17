@@ -86,8 +86,8 @@ class Encoder(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
-        b, c, t, h, w = x.shape
-        x = x.contiguous().view(b, c * t, h, w)
+        b, c, f, h, w = x.shape
+        x = x.contiguous().view(b, c * f, h, w)
         x = self.layers(x)
         # gamma = x[:, 0::2, :, :]
         # beta = x[:, 1::2, :, :]
