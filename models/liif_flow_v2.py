@@ -72,7 +72,7 @@ class VINR(nn.Module):
 @register('liif_flow_v2')
 def make_liif_flow(common_opt, specified_opt):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, nf=common_opt.z_dim,
+    encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, z_dim=common_opt.z_dim,
                           n_blocks=specified_opt.encoder_blocks)
     liif = LIIF(z_dim=common_opt.z_dim, hidden_node=specified_opt.hidden, depth=specified_opt.depth-1)
     flow_generator = ModGenerator(out_dim=2, w0=specified_opt.w0,

@@ -73,7 +73,7 @@ class X4KLIIFZC(Dataset):
         if not self.is_train:       # Test and validate dataloader
             return self.get_test_item(frame_paths)
 
-        selected_idxs, target_idx = sample_t(self.num_frames)
+        selected_idxs, target_idx = sample_t(self.num_frames, self.total_frame)
         target_t = normalize_ts(selected_idxs, target_idx, True)
 
         # Read frames

@@ -6,6 +6,7 @@ from models import register
 from models.common import LFF, SirenLayer, VINRDataParallel
 from dataloaders.utils import make_coord
 
+
 class ResBlock3D(nn.Module):
     def __init__(self, nf):
         super(ResBlock3D, self).__init__()
@@ -32,8 +33,9 @@ class RResBlock3D(nn.Module):
 
 
 class XVFIEncoder(nn.Module):
-    def __init__(self, in_c=3, num_frames=5, nf=64, n_blocks=2):
+    def __init__(self, in_c=3, num_frames=5, nf=64, z_dim=32, n_blocks=2, reduce=True):
         super(XVFIEncoder, self).__init__()
+        self.z_dim = z_dim
         self.channel_converter = nn.Sequential(
             nn.Conv3d(in_c, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)),
             nn.ReLU()
@@ -46,9 +48,11 @@ class XVFIEncoder(nn.Module):
         self.rec_ext_ds_module.append(nn.Conv3d(nf, nf, (1, 3, 3), (1, 1, 1), (0, 1, 1)))
         self.rec_ext_ds_module.append(RResBlock3D(nf))
         self.rec_ext_ds_module = nn.Sequential(*self.rec_ext_ds_module)
-        self.reduceT_conv = nn.Conv3d(nf, nf, (num_frames, 1, 1), (1, 1, 1), (0, 0, 0))
 
-        self.nf = nf
+        self.reduceT = reduce
+        if reduce:
+            self.reduceT_conv = nn.Conv3d(z_dim, z_dim, (num_frames, 1, 1), (1, 1, 1), (0, 0, 0))
+
         self.conv_last = nn.Sequential(
             nn.Conv2d(nf, 2 * nf, (4, 4), (2, 2), (1, 1)),
             nn.ReLU(),
@@ -59,15 +63,17 @@ class XVFIEncoder(nn.Module):
             nn.ReLU(),
             nn.UpsamplingNearest2d(scale_factor=2),
             nn.Conv2d(2 * nf, nf, (3, 3), (1, 1), (1, 1)),
+            nn.Conv2d(nf, z_dim, (3, 3), (1, 1), (1, 1)),
         )
 
     def forward(self, x):
         feat_x = self.rec_ext_ds_module(x)
-        B, z_dim, F, H, W = feat_x.shape
-        feat_x = feat_x.permute(0, 2, 1, 3, 4).contiguous().view(B*F, z_dim, H, W)
+        B, nf, F, H, W = feat_x.shape
+        feat_x = feat_x.permute(0, 2, 1, 3, 4).contiguous().view(B*F, nf, H, W)
         feat_x = self.conv_last(feat_x)
-        feat_x = feat_x.view(B, F, z_dim, H, W).permute(0, 2, 1, 3, 4)
-        feat_x = torch.squeeze(self.reduceT_conv(feat_x), 2)
+        if self.reduceT:
+            feat_x = feat_x.view(B, F, self.z_dim, H, W).permute(0, 2, 1, 3, 4)
+            feat_x = torch.squeeze(self.reduceT_conv(feat_x), 2)
         return feat_x
 
 
@@ -218,7 +224,7 @@ class VINR(nn.Module):
 
 @register('liif')
 def make_liif(common_opt, specified_opt):
-    encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, nf=common_opt.z_dim,
+    encoder = XVFIEncoder(in_c=3, num_frames=common_opt.num_frames, z_dim=common_opt.z_dim,
                           n_blocks=specified_opt.encoder_blocks)
     liif = LIIF(z_dim=common_opt.z_dim, hidden_node=specified_opt.hidden, depth=specified_opt.depth-1)
     mapper = ModGenerator(out_dim=3, w0=specified_opt.w0,

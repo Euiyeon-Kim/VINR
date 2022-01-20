@@ -6,13 +6,13 @@ config = DotMap(
         'model_type': 'liif_rel',
         # ['mod']
         # ['liif', 'liif_flow', 'liif_flow_v2', 'liif_flow_v3', 'liif_flow_mask_refine']
-        # ['liif_3d']
+        # ['liif_rel']
         'data_type': 'liif_rel',
         # ['mod', 'liif', 'liif_zero_centered', 'liif_rel']
 
         'common': {
             'data_root': 'x4k',
-            'patch_size': 96,
+            'patch_size': 48,
             'num_workers': 1,
 
             'num_frames': 5,

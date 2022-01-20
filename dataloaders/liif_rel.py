@@ -50,13 +50,6 @@ class X4KLIIFRel(Dataset):
             target_frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
         target_frames = np.stack(target_frames, axis=0)
 
-        # # TODO
-        # _, h, w, c = target_frames.shape
-        # ix = random.randrange(0, w - self.patch_size + 1)
-        # iy = random.randrange(0, h - self.patch_size + 1)
-        # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
-        # target_frames = target_frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
-
         target_coords, target_rgbs, cells = [], [], []
         for target_frame in target_frames:
             target_coord, target_rgb, cell = make_liif_data(target_frame)
@@ -81,7 +74,7 @@ class X4KLIIFRel(Dataset):
             return self.get_test_item(frame_paths)
 
         selected_idxs, target_idx = sample_t(self.num_frames, len(frame_paths))
-        rel_target_ts, _ = get_rel_ts(selected_idxs, self.selected_ts, target_idx)
+        rel_target_ts, target_t = get_rel_ts(selected_idxs, self.selected_ts, target_idx)
 
         # Read frames
         origin_frames = []
@@ -98,6 +91,7 @@ class X4KLIIFRel(Dataset):
         return {
             'inp_frames': frames[:, :-1, :, :],
             'selected_ts': self.selected_ts,
+            'target_t': target_t,
             'rel_target_ts': rel_target_ts,
             'target_coord': target_coord,
             'target_rgb': target_rgb,
