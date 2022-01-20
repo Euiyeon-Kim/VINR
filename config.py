@@ -13,7 +13,7 @@ config = DotMap(
         'common': {
             'data_root': 'x4k',
             'patch_size': 48,
-            'num_workers': 1,
+            'num_workers': 8,
 
             'num_frames': 5,
             'z_dim': 32,

@@ -39,7 +39,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
             for cnt, (t, rgb, coord, cell) in enumerate(zip(rel_ts, target_rgbs, target_coords, cells)):
                 t = t.transpose(1, 0)
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, selected_ts, t)
-                rgb = rgb.contiguous().view(-1, 48, 48, 3).permute(0, 3, 1, 2)
+                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 if viz:
                     save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{cnt}.png')
@@ -86,6 +86,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
             optimizer.step()
 
             cur_epoch_loss.append(loss.item())
+            break
 
         save_rgbtensor(pred_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_pred.png')
         save_rgbtensor(target_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0].item():04f}.png')
