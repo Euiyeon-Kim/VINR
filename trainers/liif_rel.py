@@ -62,7 +62,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
     best_psnr = 0.
     loss_fn = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=opt.lr)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150, 180], gamma=0.25)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100, 150], gamma=0.25)
 
     for epoch in range(opt.epochs):
         model.train()
@@ -86,7 +86,6 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
             optimizer.step()
 
             cur_epoch_loss.append(loss.item())
-            break
 
         save_rgbtensor(pred_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_pred.png')
         save_rgbtensor(target_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0].item():04f}.png')
