@@ -226,25 +226,3 @@ def make_liif(common_opt, specified_opt):
     vinr = VINR(encoder, liif, mapper)
     model = VINRDataParallel(vinr)
     return model
-
-
-if __name__ == '__main__':
-    batch_size = 7
-    num_frames = 5
-    z_dim = 50
-    h, w = 96, 96
-    encoder = XVFIEncoder(in_c=3, num_frames=num_frames, nf=z_dim, n_blocks=2)
-    z = encoder(torch.randn((batch_size, 3, num_frames, h, w)))
-
-    cell = torch.randn((batch_size, h*w, 2))
-    liif = LIIF(z_dim)
-    coord = make_coord([h, w])
-    coord = torch.unsqueeze(coord, 0).repeat(batch_size, 1, 1)
-    mod_params = liif(z, coord, cell)
-
-    mapper = ModGenerator(out_dim=3)
-    rgb = mapper(torch.rand(batch_size, 1), mod_params)
-    print(coord.shape, cell.shape)
-    model = VINR(encoder, liif, mapper)
-    out = model(torch.rand((batch_size, 3, num_frames, h, w)), coord, cell, torch.rand(batch_size, 1))
-    print(out.shape)

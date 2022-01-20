@@ -6,6 +6,10 @@ from models import register
 from models.liif import XVFIEncoder, LIIF, ModGenerator
 from models.common import VINRDataParallel
 
+"""
+    마스크도 flow랑 마찬가지로 빼기로 생성
+"""
+
 
 class VINR(nn.Module):
     def __init__(self, encoder, liif, generator, num_frames, device):

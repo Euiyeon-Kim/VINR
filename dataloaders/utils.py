@@ -46,12 +46,7 @@ def norm_img_arr_and_to_tensor(img_arr):
     return img_arr
 
 
-def augment(frames, target_frame, target_t, patch_size, zero_centered=False):
-        # Reverse
-        if random.random() < 0.5:
-            target_t = -target_t if zero_centered else 1 - target_t
-            frames.reverse()
-
+def augment_frame(frames, target_frame, patch_size):
         frames = np.stack(frames + [target_frame], axis=0)
 
         h, w, c = target_frame.shape
@@ -67,14 +62,12 @@ def augment(frames, target_frame, target_t, patch_size, zero_centered=False):
         rot = random.randint(0, 3)
         frames = np.rot90(frames, rot, (1, 2))
 
-        return frames, target_t
+        return frames
 
 
-def sample_t(num_frames):
-    total_frame = 65
-
+def sample_t(num_frames, total_frame):
     # Sample input frames and target frame
-    max_td = int((total_frame - 1) / (num_frames - 1))
+    max_td = 32 if num_frames == 2 else int((total_frame - 1) / (num_frames - 1))
     td = random.randint(2, max_td)
     first_frame_idx = random.randint(0, (total_frame - 1) - ((num_frames - 1) * td))
     last_frame_idx = first_frame_idx + ((num_frames - 1) * td)
@@ -92,3 +85,17 @@ def normalize_ts(selected_idxs, target_idx, zero_centered=False):
     target_t = (target_idx - selected_idxs[sub_idx]) / (selected_idxs[-1] - selected_idxs[sub_idx])
     return target_t
 
+
+def get_rel_ts(selected_ts, normed_selected_idx, target_idx):
+    target_t = (target_idx - selected_ts[0]) / (selected_ts[-1] - selected_ts[0])
+    return target_t - normed_selected_idx, target_t
+
+
+def augment_t(frames, ts, zero_centered=False, rel_t=False):
+    if random.random() < 0.5:
+        if rel_t:
+            ts = -ts.flip(0)
+        else:
+            ts = -ts if zero_centered else 1 - ts
+        frames.reverse()
+    return frames, ts

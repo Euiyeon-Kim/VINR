@@ -91,23 +91,6 @@ def make_mod_vinr(common_opt, specified_opt):
     return model
 
 
-if __name__ == '__main__':
-    num_frame = 5
-    z_dim = 50
-
-    encoder = Encoder(in_dim=3*num_frame, out_dim=z_dim)
-    z = encoder(torch.randn((4, 3, 5, 32, 32)))
-
-    modulator = Modulator(z_dim, 256, 4)
-    mod_params = modulator(z)
-
-    mapper = ModRGBMapper(out_dim=3)
-    rgb = mapper(torch.rand(4, 1), mod_params)
-
-    model = VINR(encoder, modulator, mapper)
-    out = model(torch.rand((4, 3, num_frame, 32, 32)), torch.rand(4))
-    print(out.shape)
-
 
 
 

@@ -29,3 +29,6 @@
 - 2번보다 나음
 
 ### 4. LIFF --> Flow 생성
+1. Warped 이미지를 input으로 받아서 masking
+2. Flow 생성할 때 mask도 같이 생성
+- Flow 암것도 안해요ㅠ

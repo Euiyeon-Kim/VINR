@@ -75,22 +75,5 @@ class VINR(nn.Module):
 
         warped = self.bwarp(frames, flows).permute(0, 2, 1, 3, 4)
         masked = torch.einsum('bcfhw,bhwf->bchw', warped, visibilities)
+
         return masked, warped, visibilities
-
-
-if __name__ == '__main__':
-    num_frame = 5
-    z_dim = 50
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    from models.common import Encoder
-    from models.mod import Modulator
-    encoder = Encoder(in_dim=3*num_frame, out_dim=z_dim)
-    modulator = Modulator(z_dim, 256, 4)
-    mod_generator = ModMapper(out_dim=num_frame*3)
-
-    model = VINR(encoder, modulator, mod_generator, device, num_frame).to(device)
-
-    out = model(torch.rand((4, 3, num_frame, 32, 32)).to(device), torch.rand(4).to(device))
-    print(out.shape)
-

@@ -10,21 +10,29 @@ from torch.utils.data import Dataset
 
 from dataloaders import register
 from dataloaders.utils import make_liif_data, norm_img_arr_and_to_tensor, augment_frame, \
-    augment_t, sample_t, normalize_ts
+    augment_t, sample_t, get_rel_ts
+
+"""
+    (-1, 1)로 input frame 초기화
+    input으로 주는 feature에 상대적으로 target t return
+    
+    ex) input: [-1, 0, 1]초의 frame target: 0.5초의 frame
+        --> target t = 1.5, 0.5, -0.5
+"""
 
 
-class X4KLIIFZC(Dataset):
+class X4KLIIFRel(Dataset):
     def __init__(self, opt, root, is_train=True):
-        super(X4KLIIFZC, self).__init__()
+        super(X4KLIIFRel, self).__init__()
         self.opt = opt
         self.num_frames = opt.num_frames
         self.patch_size = opt.patch_size
         self.clips = glob(f'{root}/*/*')
         self.is_train = is_train
-        self.total_frame = 65 if self.is_train else 33
         self.selected_ts = torch.Tensor(np.linspace(-1, 1, self.num_frames)).float()
         self.test_inp_idxs = np.linspace(0, 32, self.num_frames).astype(int)
         self.test_ts = torch.Tensor(np.linspace(-1, 1, 33)).float()
+        self.test_rel_ts = (self.test_ts - torch.unsqueeze(self.selected_ts, -1).expand(self.num_frames, 33)).permute(1, 0)
 
     def __len__(self):
         return len(self.clips)
@@ -63,18 +71,17 @@ class X4KLIIFZC(Dataset):
         frames = frames.transpose((0, 3, 1, 2)) / 127.5 - 1
         frames = torch.Tensor(frames.astype(float)).permute(1, 0, 2, 3)
 
-        return frames, self.selected_ts, self.test_ts, target_coords, target_rgbs, cells, clip_dir
+        return frames, self.selected_ts, self.test_rel_ts, target_coords, target_rgbs, cells, clip_dir
 
     def __getitem__(self, item):
         cur_clip = self.clips[item]
         frame_paths = natsorted(glob(f'{cur_clip}/*.png'))
-        assert len(frame_paths) == self.total_frame, f'Dataset is not complete. Check {cur_clip}'
 
-        if not self.is_train:       # Test and validate dataloader
+        if not self.is_train:       # Validate dataloader
             return self.get_test_item(frame_paths)
 
-        selected_idxs, target_idx = sample_t(self.num_frames)
-        target_t = normalize_ts(selected_idxs, target_idx, True)
+        selected_idxs, target_idx = sample_t(self.num_frames, len(frame_paths))
+        rel_target_ts, _ = get_rel_ts(selected_idxs, self.selected_ts, target_idx)
 
         # Read frames
         origin_frames = []
@@ -82,26 +89,24 @@ class X4KLIIFZC(Dataset):
             origin_frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
         origin_target_frame = np.array(Image.open(frame_paths[target_idx]).convert('RGB'))
 
-        origin_frames, target_t = augment_t(origin_frames, target_t, zero_centered=True, rel_t=False)
+        origin_frames, rel_target_ts = augment_t(origin_frames, rel_target_ts, zero_centered=True, rel_t=True)
         frames = augment_frame(origin_frames, origin_target_frame, self.patch_size)
-        # frames, target_t = augment(origin_frames, origin_target_frame, target_t, self.patch_size, True)
 
         target_coord, target_rgb, cell = make_liif_data(frames[-1, :, :, :])
-        target_t = torch.Tensor([target_t]).float()
 
         frames = norm_img_arr_and_to_tensor(frames)
         return {
             'inp_frames': frames[:, :-1, :, :],
             'selected_ts': self.selected_ts,
-            'target_t': target_t,
+            'rel_target_ts': rel_target_ts,
             'target_coord': target_coord,
             'target_rgb': target_rgb,
             'cell': cell
         }
 
 
-@register('liif_zero_centered')
+@register('liif_rel')
 def make_mod_dataloader(common_opt, specified_opt):
-    train_dataset = X4KLIIFZC(common_opt, f'{common_opt.data_root}/train', True)
-    val_dataset = X4KLIIFZC(common_opt, f'{common_opt.data_root}/val', False)
+    train_dataset = X4KLIIFRel(common_opt, f'{common_opt.data_root}/train', True)
+    val_dataset = X4KLIIFRel(common_opt, f'{common_opt.data_root}/val', False)
     return train_dataset, val_dataset
