@@ -12,12 +12,6 @@ from trainers import register
 from trainers.utils import psnr, save_rgbtensor
 
 
-def warp_loss(warped, target):
-    B, C, F, H, W = warped.shape
-    gt = torch.unsqueeze(target, 2).repeat(1, 1, F, 1, 1)
-    return torch.nn.L1Loss()(gt, warped)
-
-
 def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
     model.eval()
     total_psnr = 0.

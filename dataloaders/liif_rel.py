@@ -50,12 +50,13 @@ class X4KLIIFRel(Dataset):
             target_frames.append(np.array(Image.open(frame_paths[idx]).convert('RGB')))
         target_frames = np.stack(target_frames, axis=0)
 
-        # # TODO
-        # _, h, w, c = target_frames.shape
-        # ix = random.randrange(0, w - self.patch_size + 1)
-        # iy = random.randrange(0, h - self.patch_size + 1)
-        # frames = frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
-        # target_frames = target_frames[:, iy:iy + self.patch_size, ix:ix + self.patch_size, :]
+        # TODO
+        if self.opt.test_patch:
+            _, h, w, c = target_frames.shape
+            ix = random.randrange(0, w - self.opt.test_patch + 1)
+            iy = random.randrange(0, h - self.opt.test_patch + 1)
+            frames = frames[:, iy:iy + self.opt.test_patch, ix:ix + self.opt.test_patch, :]
+            target_frames = target_frames[:, iy:iy + self.opt.test_patch, ix:ix + self.opt.test_patch, :]
 
         target_coords, target_rgbs, cells = [], [], []
         for target_frame in target_frames:

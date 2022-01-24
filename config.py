@@ -13,6 +13,7 @@ config = DotMap(
         'common': {
             'data_root': 'x4k',
             'patch_size': 48,
+            'test_patch': 64,
             'num_workers': 8,
 
             'num_frames': 5,
@@ -23,7 +24,7 @@ config = DotMap(
             'val_save_epoch': 5,
             'save_epoch': 20,
 
-            'batch_size': 2,
+            'batch_size': 3,
             'lr': 1e-4,
             'factor': 0.5,
             'patience': 10,

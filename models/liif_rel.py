@@ -31,10 +31,7 @@ class LIIF3D(nn.Module):
         rh = 1 / H
         rw = 1 / W
 
-        feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
-            unsqueeze(0).expand(B, 2, H, W)
-        # feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).permute(2, 0, 1). \
-        #     unsqueeze(0).expand(B, 2, H, W)
+        feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).unsqueeze(0).expand(B, 2, H, W)
 
         preds = []
         areas = []
@@ -46,7 +43,8 @@ class LIIF3D(nn.Module):
                 query_coord_[:, :, 0] += vx * rh + eps_shift
                 query_coord_[:, :, 1] += vy * rw + eps_shift
                 query_coord_.clamp_(-1 + 1e-6, 1 - 1e-6)
-                feat_query_coord_ = query_coord_.flip(-1).unsqueeze(1).repeat(self.num_frames, 1, 1, 1)
+
+                feat_query_coord_ = query_coord_.flip(-1).unsqueeze(1).repeat_interleave(5, dim=0)
 
                 # q_feat: (B, query 수, z_dim * 9) 가장 가까운 lr feature 반환
                 q_feat = F.grid_sample(unfold_feat, feat_query_coord_,
@@ -58,13 +56,14 @@ class LIIF3D(nn.Module):
                 rel_coord = query_coord - q_coord
                 rel_coord[:, :, 0] *= H
                 rel_coord[:, :, 1] *= W
-                rel_coord_for_concat = rel_coord.repeat(self.num_frames, 1, 1)
+
+                rel_coord_for_concat = rel_coord.repeat_interleave(5, dim=0)
                 inp = torch.cat([q_feat, rel_coord_for_concat], dim=-1)
 
                 rel_cell = cell.clone()
                 rel_cell[:, :, 0] *= H
                 rel_cell[:, :, 1] *= W
-                rel_cell_for_concat = rel_cell.repeat(self.num_frames, 1, 1)
+                rel_cell_for_concat = rel_cell.repeat_interleave(5, dim=0)
                 inp = torch.cat([inp, rel_cell_for_concat], dim=-1)
 
                 mod_params = self.modulator(inp.view(BF * Q, -1), BF, Q)
@@ -79,7 +78,7 @@ class LIIF3D(nn.Module):
 
         ret = 0
         for pred, area in zip(preds, areas):
-            ratio = (area / tot_area).repeat(self.num_frames, 1)
+            ratio = (area / tot_area).repeat_interleave(5, dim=0)
             pred = torch.stack(pred, 0)
             cur_mod_params = torch.einsum('dbqh,bq->dbqh', pred, ratio)
             ret = ret + cur_mod_params
@@ -156,7 +155,6 @@ def make_liif_flow(common_opt, specified_opt):
     mask_generator = Encoder(in_dim=common_opt.num_frames*3, out_dim=common_opt.num_frames)
     vinr = VINR(encoder, liif, flow_generator, mask_generator, common_opt.num_frames, device)
     model = VINRDataParallel(vinr)
-
     # frames = torch.rand(2, 3, 5, 32, 32)
     # coord = torch.ones(2, 32 * 32, 2)
     # cell = torch.ones(2, 32 * 32, 2)

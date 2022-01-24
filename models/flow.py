@@ -19,6 +19,7 @@ class ModMapper(nn.Module):
     def forward(self, t, mod_params):
         b, h, w, hidden = mod_params[0].shape
         x = self.lff(t).unsqueeze(1).unsqueeze(1).repeat(1, h, w, 1)
+        print(x.shape)
         for layer, mod in zip(self.layers, mod_params):
             x = layer(x)
             x *= mod

@@ -12,14 +12,10 @@ from trainers import register
 from trainers.utils import psnr, save_rgbtensor
 
 
-def warp_loss(warped, target):
-    B, C, F, H, W = warped.shape
-    gt = torch.unsqueeze(target, 2).repeat(1, 1, F, 1, 1)
-    return torch.nn.L1Loss()(gt, warped)
+def validate(exp_dir, device, model, val_dataloader, epoch, viz=False, patch_size=None):
+    if not patch_size:
+        patch_size = 512
 
-
-def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
-    model.eval()
     total_psnr = 0.
     for data in val_dataloader:
         input_frames, selected_ts, rel_ts, target_coords, target_rgbs, cells, clip_name = data
@@ -39,7 +35,7 @@ def validate(exp_dir, device, model, val_dataloader, epoch, viz=False):
             for cnt, (t, rgb, coord, cell) in enumerate(zip(rel_ts, target_rgbs, target_coords, cells)):
                 t = t.transpose(1, 0)
                 pred_frame, _, _ = model.get_rgb(input_frames, feat, coord, cell, selected_ts, t)
-                rgb = rgb.contiguous().view(-1, 512, 512, 3).permute(0, 3, 1, 2)
+                rgb = rgb.contiguous().view(-1, patch_size, patch_size, 3).permute(0, 3, 1, 2)
                 cur_psnr += psnr(rgb, pred_frame)
                 if viz:
                     save_rgbtensor(pred_frame[0], f'{exp_dir}/val/{epoch}/{clip_name[0]}/{cnt}.png')
@@ -110,7 +106,7 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
 
         # Validate - save best model
         viz = True if (epoch + 1) % opt.val_save_epoch == 0 else False
-        val_psnr = validate(exp_dir, device, model, val_dataloader, epoch, viz)
+        val_psnr = validate(exp_dir, device, model, val_dataloader, epoch, viz, opt.test_patch)
 
         writer.add_scalar('val_psnr', val_psnr, epoch)
         if val_psnr > best_psnr:
