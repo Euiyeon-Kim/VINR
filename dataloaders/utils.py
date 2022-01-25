@@ -78,8 +78,14 @@ def sample_t(num_frames, total_frame):
 
 def normalize_ts(selected_idxs, target_idx, zero_centered=False):
     if zero_centered:
-        assert len(selected_idxs) % 2 == 1, "To use zero-centered t, # input frame should be odd"
-        sub_idx = int(len(selected_idxs)/2)
+        if len(selected_idxs) == 2:
+            s, e = selected_idxs[0], selected_idxs[1]
+            scale = (e - s) / 2
+            target_t = (target_idx - (e - scale)) / scale
+            return target_t
+        else:
+            assert len(selected_idxs) % 2 == 1, "To use zero-centered t, # input frame should be odd"
+            sub_idx = int(len(selected_idxs)/2)
     else:
         sub_idx = 0
     target_t = (target_idx - selected_idxs[sub_idx]) / (selected_idxs[-1] - selected_idxs[sub_idx])

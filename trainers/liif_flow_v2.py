@@ -78,24 +78,23 @@ def train(opt, exp_dir, model, train_dataloader, val_dataloader):
 
             cur_epoch_loss.append(loss.item())
 
-            if step % opt.viz_steps == 0:
-                save_rgbtensor(pred_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_pred.png')
-                save_rgbtensor(target_frame[0], f'{exp_dir}/imgs/{epoch}_{step}_gt_{target_t[0].item():04f}.png')
+        save_rgbtensor(pred_frame[0], f'{exp_dir}/imgs/{epoch}_pred.png')
+        save_rgbtensor(target_frame[0], f'{exp_dir}/imgs/{epoch}_gt_{target_t[0].item():04f}.png')
 
-                viz_input = inp_frames[0].permute(1, 0, 2, 3)
-                viz_input = (viz_input + 1.) / 2.
-                for idx, img in enumerate(viz_input):
-                    save_rgbtensor(img, f'{exp_dir}/imgs/{epoch}_{step}_{idx}.png', norm=False)
+        viz_input = inp_frames[0].permute(1, 0, 2, 3)
+        viz_input = (viz_input + 1.) / 2.
+        for idx, img in enumerate(viz_input):
+            save_rgbtensor(img, f'{exp_dir}/imgs/{epoch}_{idx}.png', norm=False)
 
-                viz_warp = warped[0].permute(1, 0, 2, 3)
-                viz_warp = (viz_warp + 1.) / 2.
-                for idx, img in enumerate(viz_warp):
-                    save_rgbtensor(img, f'{exp_dir}/flow/{epoch}_{step}_w{idx}.png', norm=False)
+        viz_warp = warped[0].permute(1, 0, 2, 3)
+        viz_warp = (viz_warp + 1.) / 2.
+        for idx, img in enumerate(viz_warp):
+            save_rgbtensor(img, f'{exp_dir}/flow/{epoch}_w{idx}.png', norm=False)
 
-                viz_mask = visibilities[0].permute(2, 0, 1)
-                for idx, img in enumerate(viz_mask):
-                    save_rgbtensor(torch.unsqueeze(img, 0),
-                                   f'{exp_dir}/flow/{epoch}_{step}_m{idx}_{torch.mean(img):04f}.png', norm=False)
+        viz_mask = visibilities[0].permute(2, 0, 1)
+        for idx, img in enumerate(viz_mask):
+            save_rgbtensor(torch.unsqueeze(img, 0),
+                           f'{exp_dir}/flow/{epoch}_m{idx}_{torch.mean(img):04f}.png', norm=False)
 
         print(np.mean(cur_epoch_loss))
         writer.add_scalar('train/loss', np.mean(cur_epoch_loss), epoch)

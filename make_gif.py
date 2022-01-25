@@ -5,8 +5,8 @@ import imageio
 
 
 if __name__ == '__main__':
-    prefix = 'mod_rgb'
-    clips = natsorted(glob(f'mod_rgb/*'))
+    prefix = 'sub'
+    clips = natsorted(glob(f'tmp/*'))
     for c in clips:
         frame_paths = natsorted(glob(f'{c}/*'))
         frames = []

@@ -3,20 +3,20 @@ from dotmap import DotMap
 config = DotMap(
     {
         'exp_name': 'debug',
-        'model_type': 'liif_rel',
+        'model_type': 'liif_flow_mask_refine',
         # ['mod']
         # ['liif', 'liif_flow', 'liif_flow_v2', 'liif_flow_v3', 'liif_flow_mask_refine']
         # ['liif_rel']
-        'data_type': 'liif_rel',
+        'data_type': 'liif_zero_centered',
         # ['mod', 'liif', 'liif_zero_centered', 'liif_rel']
 
         'common': {
             'data_root': 'x4k',
-            'patch_size': 48,
+            'patch_size': 96,
             'test_patch': 64,
             'num_workers': 8,
 
-            'num_frames': 5,
+            'num_frames': 2,
             'z_dim': 32,
 
             'epochs': 1500,
