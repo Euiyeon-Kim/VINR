@@ -3,10 +3,11 @@ from dotmap import DotMap
 config = DotMap(
     {
         'exp_name': 'debug',
-        'model_type': 'liif_flow_mask_refine',
+        'model_type': 't_and_selected',
         # ['mod']
         # ['liif', 'liif_flow', 'liif_flow_v2', 'liif_flow_v3', 'liif_flow_mask_refine']
         # ['liif_rel']
+        # ['t_and_selected']
         'data_type': 'liif_zero_centered',
         # ['mod', 'liif', 'liif_zero_centered', 'liif_rel']
 
@@ -57,5 +58,11 @@ config = DotMap(
             'depth': 5,
             'w0': 200
         },
+        't_and_selected': {
+            'encoder_blocks': 2,
+            'hidden': 256,
+            'depth': 5,
+            'w0': 200
+        }
     }
 )

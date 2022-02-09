@@ -11,5 +11,7 @@ def register(name):
 def make(opt):
     m_type = 'liif_flow_v2' if opt.model_type == 'liif_flow_v3' or opt.model_type == 'liif_flow_mask_refine' \
         else opt.model_type
+    if opt.model_type == 't_and_selected':
+        m_type = 'liif_flow_v2'
     train_f = trainers[m_type](opt['common'], opt.exp_name)
     return train_f

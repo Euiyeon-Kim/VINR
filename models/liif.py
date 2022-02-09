@@ -123,8 +123,10 @@ class LIIF(nn.Module):
         rh = 1 / H
         rw = 1 / W
 
-        feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
+        feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).permute(2, 0, 1). \
             unsqueeze(0).expand(B, 2, H, W)
+        # feat_coord = make_coord(unfold_feat.shape[-2:], flatten=False).cuda().permute(2, 0, 1).\
+        #     unsqueeze(0).expand(B, 2, H, W)
 
         preds = []
         areas = []
@@ -176,9 +178,9 @@ class LIIF(nn.Module):
 
 
 class ModGenerator(nn.Module):
-    def __init__(self, out_dim=3, w0=200, hidden_node=256, depth=5):
+    def __init__(self, in_dim=1, out_dim=3, w0=200, hidden_node=256, depth=5):
         super(ModGenerator, self).__init__()
-        self.lff = LFF(1, hidden_node)
+        self.lff = LFF(in_dim, hidden_node)
         self.depth = depth
 
         layers = [SirenLayer(in_f=hidden_node, out_f=hidden_node, w0=w0, is_first=True)]
